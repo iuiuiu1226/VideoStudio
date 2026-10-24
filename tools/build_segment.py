@@ -2,7 +2,7 @@
 """依剪輯清單（JSON）把素材剪成一段直式影片，並燒錄字幕。
 
 用法：
-  python3 tools/build_segment.py cuts/seg1_hook.json \
+  python3 tools/build_segment.py cuts/seg1_hook.json [cuts/seg2_how.json ...] \
       --src <素材資料夾> --font <字型資料夾> -o output/seg1_hook.mp4
 
 剪輯清單格式見 cuts/seg1_hook.json：
@@ -53,64 +53,65 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cutlist")
+    ap.add_argument("cutlists", nargs="+", help="可給多個，依序接成一支")
     ap.add_argument("--src", required=True)
     ap.add_argument("--font", required=True, help="含字型檔的資料夾")
     ap.add_argument("-o", "--out", required=True)
     args = ap.parse_args()
 
-    spec = json.load(open(args.cutlist, encoding="utf-8"))
-    style = spec["style"]
+    specs = [json.load(open(p, encoding="utf-8")) for p in args.cutlists]
+    style = specs[0]["style"]
+    spec = {"clips": [c for sp in specs for c in sp["clips"]]}
     tmp = tempfile.mkdtemp()
-    parts, events, t0 = [], [], 0.0
+    # 全部在同一條濾鏡鏈裡剪接：每段長度先對齊到整數影格，音訊裁成同樣長度，
+    # 避免分段輸出再串接時的影格補齊與 AAC 前置延遲累積，造成字幕與音畫漂移
+    inputs, chains, labels, events, t0 = [], [], [], [], 0.0
+    n_in = 0
 
     for i, c in enumerate(spec["clips"]):
-        part = os.path.join(tmp, f"p{i:02d}.mp4")
+        raw = c["dur"] if "card" in c else c["out"] - c["in"]
+        dur = round(raw * FPS) / FPS
         if "card" in c:
-            dur = c["dur"]
-            run(["ffmpeg", "-v", "error", "-y",
-                 "-f", "lavfi", "-i", f"color=c={style.get('card_bg', '0x141414')}:s={W}x{H}:r={FPS}:d={dur}",
-                 "-f", "lavfi", "-i", f"anullsrc=r=48000:cl=stereo:d={dur}",
-                 "-shortest", "-pix_fmt", "yuv420p",
-                 "-c:v", "libx264", "-preset", "medium", "-crf", "17",
-                 "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", part])
-            parts.append(part)
+            inputs += ["-f", "lavfi", "-i",
+                       f"color=c={style.get('card_bg', '0x141414')}:s={W}x{H}:r={FPS}:d={dur}",
+                       "-f", "lavfi", "-i", f"anullsrc=r=48000:cl=stereo:d={dur}"]
+            vi, ai = n_in, n_in + 1
+            n_in += 2
+            vf = f"format=yuv420p,setsar=1"
+            af = "anull"
             events.append((t0, t0 + dur, c["card"], "Card"))
-            t0 += dur
-            continue
-        dur = c["out"] - c["in"]
-        z = c.get("zoom", 1.0)
-        # 依 zoom 放大後裁回 1080x1920，裁切框偏上，保留臉部
-        vf = (f"scale={int(W * z) // 2 * 2}:{int(H * z) // 2 * 2},"
-              f"crop={W}:{H}:(iw-{W})/2:(ih-{H})*{c.get('crop_y', 0.35)},"
-              f"fps={FPS},format=yuv420p,setsar=1")
-        # 人聲做成雙單聲道（左右相同），手機喇叭、單聲道裝置都能正常出聲
-        af = ("pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
-              f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.3f}:d={AFADE}")
-        run(["ffmpeg", "-v", "error", "-y", "-ss", f"{c['in']}", "-t", f"{dur}",
-             "-i", os.path.join(args.src, c["src"]), "-vf", vf, "-af", af,
-             "-c:v", "libx264", "-preset", "medium", "-crf", "17",
-             "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", part])
-        parts.append(part)
-        for s, e, text in c.get("subs", []):
-            events.append((t0 + s, t0 + min(e, dur), text, "Default"))
+        else:
+            inputs += ["-ss", f"{c['in']}", "-t", f"{dur + 0.2}",
+                       "-i", os.path.join(args.src, c["src"])]
+            vi = ai = n_in
+            n_in += 1
+            z = c.get("zoom", 1.0)
+            # 依 zoom 放大後裁回 1080x1920，裁切框偏上，保留臉部
+            vf = (f"scale={int(W * z) // 2 * 2}:{int(H * z) // 2 * 2},"
+                  f"crop={W}:{H}:(iw-{W})/2:(ih-{H})*{c.get('crop_y', 0.35)},"
+                  f"format=yuv420p,setsar=1")
+            # 人聲做成雙單聲道（左右相同），手機喇叭、單聲道裝置都能正常出聲
+            af = ("pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
+                  f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.4f}:d={AFADE}")
+            for s, e, text in c.get("subs", []):
+                events.append((t0 + s, t0 + min(e, dur), text, "Default"))
+        chains.append(f"[{vi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,{vf}[v{i}]")
+        chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
+                      f"apad,atrim=duration={dur:.4f},asetpts=PTS-STARTPTS,{af}[a{i}]")
+        labels.append(f"[v{i}][a{i}]")
         t0 += dur
-
-    lst = os.path.join(tmp, "list.txt")
-    with open(lst, "w") as f:
-        f.writelines(f"file '{p}'\n" for p in parts)
-    joined = os.path.join(tmp, "joined.mp4")
-    run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", lst,
-         "-c", "copy", joined])
 
     ass = os.path.join(tmp, "subs.ass")
     build_ass(events, ass, style)
+    graph = ";".join(chains) + ";" + "".join(labels) + \
+        f"concat=n={len(labels)}:v=1:a=1[vc][ac];" \
+        f"[vc]subtitles={ass}:fontsdir={args.font}[vo];" \
+        "[ac]loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[ao]"
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    run(["ffmpeg", "-v", "error", "-y", "-i", joined,
-         "-vf", f"subtitles={ass}:fontsdir={args.font}",
-         "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+    run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", graph,
+         "-map", "[vo]", "-map", "[ao]",
          "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
-         "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+         "-r", str(FPS), "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
          "-movflags", "+faststart", args.out])
     print(f"{args.out}  {t0:.2f}s")
 
