@@ -69,7 +69,9 @@ def main():
         vf = (f"scale={int(W * z) // 2 * 2}:{int(H * z) // 2 * 2},"
               f"crop={W}:{H}:(iw-{W})/2:(ih-{H})*{c.get('crop_y', 0.35)},"
               f"fps={FPS},format=yuv420p,setsar=1")
-        af = f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.3f}:d={AFADE}"
+        # 人聲做成雙單聲道（左右相同），手機喇叭、單聲道裝置都能正常出聲
+        af = ("pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
+              f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.3f}:d={AFADE}")
         part = os.path.join(tmp, f"p{i:02d}.mp4")
         run(["ffmpeg", "-v", "error", "-y", "-ss", f"{c['in']}", "-t", f"{dur}",
              "-i", os.path.join(args.src, c["src"]), "-vf", vf, "-af", af,
