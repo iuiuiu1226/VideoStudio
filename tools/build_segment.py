@@ -18,10 +18,23 @@ import tempfile
 
 W, H, FPS = 1080, 1920, 30
 AFADE = 0.012  # 每個切點的音訊淡入淡出，避免爆音
+TARGET_LUFS = -16.0
 
 
 def run(cmd):
     subprocess.run(cmd, check=True)
+
+
+def measure_lufs(src, start, dur):
+    """量測素材某段的整合響度（LUFS），用來逐段對齊音量。"""
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-ss", f"{start}", "-t", f"{dur}", "-i", src,
+                        "-af", "ebur128", "-f", "null", "-"],
+                       capture_output=True, text=True)
+    vals = [l.split()[1] for l in r.stderr.splitlines() if l.strip().startswith("I:")]
+    try:
+        return float(vals[-1])
+    except (IndexError, ValueError):
+        return None
 
 
 def ass_time(t):
@@ -90,8 +103,13 @@ def main():
             vf = (f"scale={int(W * z) // 2 * 2}:{int(H * z) // 2 * 2},"
                   f"crop={W}:{H}:(iw-{W})/2:(ih-{H})*{c.get('crop_y', 0.35)},"
                   f"format=yuv420p,setsar=1")
+            # 逐段把響度拉到同一基準，不同手機、不同距離錄的人聲才不會忽大忽小
+            src = os.path.join(args.src, c["src"])
+            lufs = measure_lufs(src, c["in"], dur)
+            gain = 0.0 if lufs is None or lufs < -60 else max(-12.0, min(12.0, TARGET_LUFS - lufs))
             # 人聲做成雙單聲道（左右相同），手機喇叭、單聲道裝置都能正常出聲
             af = ("pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
+                  f"highpass=f=80,volume={gain:.2f}dB,"
                   f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.4f}:d={AFADE}")
             for s, e, text in c.get("subs", []):
                 events.append((t0 + s, t0 + min(e, dur), text, "Default"))
