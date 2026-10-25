@@ -98,11 +98,17 @@ def main():
                        "-i", os.path.join(args.src, c["src"])]
             vi = ai = n_in
             n_in += 1
-            z = c.get("zoom", 1.0)
-            # 依 zoom 放大後裁回 1080x1920，裁切框偏上，保留臉部
-            vf = (f"scale={int(W * z) // 2 * 2}:{int(H * z) // 2 * 2},"
-                  f"crop={W}:{H}:(iw-{W})/2:(ih-{H})*{c.get('crop_y', 0.35)},"
-                  f"format=yuv420p,setsar=1")
+            if "frame" in c:
+                # tools/autoframe.py 算好的裁切框：同一人各段大小、位置一致
+                fr = c["frame"]
+                vf = (f"crop={fr['w']:.1f}:{fr['h']:.1f}:{fr['x']:.1f}:{fr['y']:.1f},"
+                      f"scale={W}:{H}:flags=lanczos,format=yuv420p,setsar=1")
+            else:
+                z = c.get("zoom", 1.0)
+                # 依 zoom 放大後裁回 1080x1920，裁切框偏上，保留臉部
+                vf = (f"scale={int(W * z) // 2 * 2}:{int(H * z) // 2 * 2},"
+                      f"crop={W}:{H}:(iw-{W})/2:(ih-{H})*{c.get('crop_y', 0.35)},"
+                      f"format=yuv420p,setsar=1")
             # 逐段把響度拉到同一基準，不同手機、不同距離錄的人聲才不會忽大忽小
             src = os.path.join(args.src, c["src"])
             lufs = measure_lufs(src, c["in"], dur)
