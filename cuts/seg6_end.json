@@ -1,17 +1,28 @@
 {
-  "name": "段落 6｜片尾卡",
+  "name": "段落 6｜片尾動畫（由 tools/endcard.py 依 cuts/endcard.json 產生）",
   "style": {
     "font": "Noto Sans TC",
     "size": 78,
     "outline": 4,
     "shadow": 1,
-    "margin_v": 420
+    "margin_v": 660,
+    "title": "BK 測試｜學員分享",
+    "note": "© 第七感人生智慧學"
   },
   "clips": [
     {
-      "id": "#card",
-      "card": "{\\fs120}第七感\\N{\\fs50} \\N{\\fs60}BK 測試｜一日工作坊\\N{\\fs50} \\N{\\fs46\\c&HB0B0B0&}報名資訊請見說明欄",
-      "dur": 3.0
+      "id": "#endcard",
+      "src": "output/endcard.mp4",
+      "in": 0.0,
+      "out": 5.5,
+      "subs": [],
+      "no_overlay": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1080,
+        "h": 1920
+      }
     }
   ]
 }

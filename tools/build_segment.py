@@ -97,8 +97,9 @@ def main():
             af = "anull"
             events.append((t0, t0 + dur, c["card"], "Card"))
         else:
-            inputs += ["-ss", f"{c['in']}", "-t", f"{dur + 0.2}",
-                       "-i", os.path.join(args.src, c["src"])]
+            # src 可以是素材資料夾裡的檔名，或已存在的路徑（例如 output/endcard.mp4）
+            src = c["src"] if os.path.exists(c["src"]) else os.path.join(args.src, c["src"])
+            inputs += ["-ss", f"{c['in']}", "-t", f"{dur + 0.2}", "-i", src]
             vi = ai = n_in
             n_in += 1
             if "frame" in c:
@@ -113,7 +114,6 @@ def main():
                       f"crop={W}:{H}:(iw-{W})/2:(ih-{H})*{c.get('crop_y', 0.35)},"
                       f"format=yuv420p,setsar=1")
             # 逐段把響度拉到同一基準，不同手機、不同距離錄的人聲才不會忽大忽小
-            src = os.path.join(args.src, c["src"])
             lufs = measure_lufs(src, c["in"], dur)
             gain = 0.0 if lufs is None or lufs < -60 else max(-12.0, min(12.0, TARGET_LUFS - lufs))
             # 人聲做成雙單聲道（左右相同），手機喇叭、單聲道裝置都能正常出聲
@@ -122,7 +122,9 @@ def main():
                   f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.4f}:d={AFADE}")
             for s, e, text in c.get("subs", []):
                 events.append((t0 + s, t0 + min(e, dur), text, "Default"))
-            if spans and abs(spans[-1][1] - t0) < 1e-6:
+            if c.get("no_overlay"):
+                pass  # 片尾等畫面不放標題、Logo
+            elif spans and abs(spans[-1][1] - t0) < 1e-6:
                 spans[-1][1] = t0 + dur
             else:
                 spans.append([t0, t0 + dur])

@@ -1,0 +1,14 @@
+{
+  "logo": "assets/logo.png",
+  "logo_h": 300,
+  "logo_y": 640,
+  "dur": 5.5,
+  "bg": "0x0D1018",
+  "lines": [
+    {"text": "第七感人生智慧學", "y": 900, "size": 76, "color": "D9B45A", "start": 0.7, "spacing": 8},
+    {"text": "BK 測試｜一日工作坊", "y": 1010, "size": 54, "color": "FFFFFF", "start": 1.2},
+    {"text": "活動日期｜○月○日（待提供）", "y": 1170, "size": 42, "color": "C8CCD4", "start": 1.7, "bold": false},
+    {"text": "報名洽詢｜LINE：@○○○○（待提供）", "y": 1240, "size": 42, "color": "C8CCD4", "start": 1.7, "bold": false},
+    {"text": "© 第七感人生智慧學 版權所有", "y": 1560, "size": 30, "color": "7A808C", "start": 2.2, "bold": false}
+  ]
+}
