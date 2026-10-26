@@ -53,6 +53,8 @@ ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Default,{style['font']},{style['size']},&H00FFFFFF,&H00FFFFFF,&H00202020,&H80000000,-1,0,0,0,100,100,2,0,1,{style['outline']},{style['shadow']},2,80,80,{style['margin_v']},1
+Style: Title,{style['font']},{style.get('title_size', 60)},&H00FFFFFF,&H00FFFFFF,&H00202020,&H80000000,-1,0,0,0,100,100,3,0,1,{style['outline']},{style['shadow']},{style.get('title_align', 8)},{style.get('title_margin_l', 80)},80,{style.get('title_margin', 200)},1
+Style: Note,{style['font']},{style.get('note_size', 32)},&H50FFFFFF,&H50FFFFFF,&H80202020,&H00000000,0,0,0,0,100,100,2,0,1,2,0,{style.get('title_align', 8)},{style.get('title_margin_l', 80)},80,{style.get('note_margin', 275)},1
 Style: Card,{style['font']},{style.get('card_size', 84)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,4,0,1,0,0,5,80,80,0,1
 
 [Events]
@@ -79,6 +81,7 @@ def main():
     # 全部在同一條濾鏡鏈裡剪接：每段長度先對齊到整數影格，音訊裁成同樣長度，
     # 避免分段輸出再串接時的影格補齊與 AAC 前置延遲累積，造成字幕與音畫漂移
     inputs, chains, labels, events, t0 = [], [], [], [], 0.0
+    spans = []  # 人物畫面的時間區段（字卡不放標題、Logo）
     n_in = 0
 
     for i, c in enumerate(spec["clips"]):
@@ -119,18 +122,39 @@ def main():
                   f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.4f}:d={AFADE}")
             for s, e, text in c.get("subs", []):
                 events.append((t0 + s, t0 + min(e, dur), text, "Default"))
+            if spans and abs(spans[-1][1] - t0) < 1e-6:
+                spans[-1][1] = t0 + dur
+            else:
+                spans.append([t0, t0 + dur])
         chains.append(f"[{vi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,{vf}[v{i}]")
         chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
                       f"apad,atrim=duration={dur:.4f},asetpts=PTS-STARTPTS,{af}[a{i}]")
         labels.append(f"[v{i}][a{i}]")
         t0 += dur
 
+    # 常駐標題（style.title）與小字（style.note，例如版權），只出現在人物畫面
+    for a, b in spans:
+        if style.get("title"):
+            events.append((a, b, style["title"], "Title"))
+        if style.get("note"):
+            events.append((a, b, style["note"], "Note"))
+
     ass = os.path.join(tmp, "subs.ass")
     build_ass(events, ass, style)
     graph = ";".join(chains) + ";" + "".join(labels) + \
         f"concat=n={len(labels)}:v=1:a=1[vc][ac];" \
-        f"[vc]subtitles={ass}:fontsdir={args.font}[vo];" \
+        f"[vc]subtitles={ass}:fontsdir={args.font}[vs];" \
         "[ac]loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[ao]"
+    if style.get("logo"):
+        # style.logo：Logo 圖檔，放在標題左側，高度 logo_h，只出現在人物畫面
+        inputs += ["-loop", "1", "-i", style["logo"]]
+        lh = style.get("logo_h", 110)
+        lx, ly = style.get("logo_x", 90), style.get("logo_y", 230)
+        on = "+".join(f"between(t,{a:.3f},{b:.3f})" for a, b in spans) or "0"
+        graph += (f";[{n_in}:v]scale=-1:{lh},format=rgba[lg];"
+                  f"[vs][lg]overlay={lx}:{ly}:shortest=1:enable='{on}'[vo]")
+    else:
+        graph += ";[vs]null[vo]"
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", graph,
          "-map", "[vo]", "-map", "[ao]",
