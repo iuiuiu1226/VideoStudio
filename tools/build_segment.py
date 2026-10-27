@@ -19,6 +19,7 @@ import tempfile
 W, H, FPS = 1080, 1920, 30
 AFADE = 0.012  # 每個切點的音訊淡入淡出，避免爆音
 TARGET_LUFS = -16.0
+MAX_GAIN = 24.0
 
 
 def run(cmd):
@@ -115,9 +116,11 @@ def main():
                       f"format=yuv420p,setsar=1")
             # 逐段把響度拉到同一基準，不同手機、不同距離錄的人聲才不會忽大忽小
             lufs = measure_lufs(src, c["in"], dur)
-            gain = 0.0 if lufs is None or lufs < -60 else max(-12.0, min(12.0, TARGET_LUFS - lufs))
-            # 人聲做成雙單聲道（左右相同），手機喇叭、單聲道裝置都能正常出聲
-            af = ("pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
+            # 降噪後的素材可能很小聲，上限放寬到 ±MAX_GAIN；"gain_db" 可逐段微調
+            gain = 0.0 if lufs is None or lufs < -70 else max(-MAX_GAIN, min(MAX_GAIN, TARGET_LUFS - lufs))
+            gain += c.get("gain_db", 0.0)
+            # 人聲做成雙單聲道（左右相同），手機喇叭、單聲道裝置都能正常出聲；浮點運算避免補音量時破音
+            af = ("aformat=sample_fmts=fltp,pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
                   f"highpass=f=80,volume={gain:.2f}dB,"
                   f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.4f}:d={AFADE}")
             for s, e, text in c.get("subs", []):

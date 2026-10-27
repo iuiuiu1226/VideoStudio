@@ -44,6 +44,9 @@ python3 tools/build_segment.py cuts/seg1_hook.json cuts/seg2_how.json cuts/seg3_
     cuts/seg4_feel.json cuts/seg5_use.json cuts/seg6_end.json \
     --src <降噪後資料夾> --font <字型資料夾> -o output/完整版.mp4
 
+# 檢查每段響度是否一致（建議差距 2 dB 以內）
+python3 tools/check_loudness.py output/完整版.mp4 cuts/seg1_hook.json cuts/seg2_how.json cuts/seg3_why.json cuts/seg4_feel.json cuts/seg5_use.json
+
 # 5. 背景音樂（原創合成，無版權問題）並混音：講話時自動壓低，片尾浮上來
 python3 tools/bgm.py --dur <成片秒數> --outro <片尾開始秒數> -o output/bgm.wav
 python3 tools/mix_bgm.py output/完整版.mp4 output/bgm.wav -o output/完整版_配樂.mp4
@@ -51,5 +54,5 @@ python3 tools/mix_bgm.py output/完整版.mp4 output/bgm.wav -o output/完整版
 
 剪輯清單欄位：`src` 素材檔、`in`/`out` 切點（秒）、`subs` 字幕（時間以片段開頭為 0）、
 `frame` 裁切框（由 autoframe 產生）、`in0`/`out0` 加氣口前的原始切點、
-`tail`/`lead` 氣口上限覆寫、`card`/`dur` 純文字字卡、`no_overlay` 不放標題（片尾用）。
+`tail`/`lead` 氣口上限覆寫、`gain_db` 逐段音量微調、`card`/`dur` 純文字字卡、`no_overlay` 不放標題（片尾用）。
 `style` 裡可設 `title`、`note`、`logo` 等常駐元素。
