@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """合成「中性、帶點震撼感，但整體輕鬆」的原創背景音樂（無版權問題）。
 
-像紀錄片揭曉一件事的配樂：每分鐘 92 拍，和弦 Am → F → C → G 循環。
+像紀錄片揭曉一件事的配樂。兩種調性（--mood）：
+  - uplift（預設）：每分鐘 96 拍，C(add9) → G → F(add9) → G，開放明亮、不悲傷
+  - dark：每分鐘 92 拍，Am → F → C → G，較沉、帶一點感傷
   - 柔和偏暗的鋼琴八分音符反覆（像心跳往前推）、溫暖的合成器長音、低音脈動
   - 鉤子段不放鼓營造懸念，第二段起加入輕柔的大鼓與腳踏鈸
   - 開頭一聲低沉的衝擊音；段落交接前有漸強的上升音效
@@ -10,7 +12,7 @@
 輸出前把響度調到 -18 LUFS，方便和人聲混音。
 
 用法：
-  python3 tools/bgm_reveal.py --dur 93.5 --sections 0,15.67,31.43,50.3,65.97 --outro 86.5 -o output/bgm_reveal.wav
+  python3 tools/bgm_reveal.py --dur 93.5 --sections 0,15.67,31.43,50.3,65.97 --outro 86.5 [--mood uplift|dark] -o output/bgm_reveal.wav
 """
 import argparse
 import subprocess
@@ -21,10 +23,18 @@ import numpy as np
 from scipy.signal import butter, fftconvolve, sosfilt
 
 SR = 48000
-BPM = 92
+MOODS = {
+    # 每個和弦三個音（MIDI）：低音、中、上；鋼琴反覆在這三個音之間跑
+    "uplift": {"bpm": 96, "chords": [[48, 55, 62], [55, 59, 62], [53, 60, 67], [55, 59, 62]],  # C(add9) G F(add9) G
+               "bright": 1.35, "hat": 0.05},
+    "dark": {"bpm": 92, "chords": [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]],  # Am F C G
+             "bright": 1.0, "hat": 0.035},
+}
+BPM = 96
 BEAT = 60 / BPM
 BAR = BEAT * 4
-CHORDS = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]  # Am F C G
+CHORDS = MOODS["uplift"]["chords"]
+BRIGHT = 1.0
 OSTINATO = [0, 2, 1, 2, 0, 2, 1, 2]  # 八分音符：根音、五度、三度、五度…
 FINAL = [48, 55, 60, 64, 67]  # 片尾 C 大和弦
 
@@ -49,8 +59,10 @@ def piano(f, dur=1.8):
     """柔和偏暗的鋼琴（毛氈鋼琴感）。"""
     t = np.arange(int(dur * SR)) / SR
     att = 1 - np.exp(-t / 0.004)
+    # BRIGHT > 1 時泛音較多、聲音較亮
     sig = sum(a * np.sin(2 * np.pi * k * f * t) * np.exp(-t / tau)
-              for k, a, tau in [(1, 1.0, 0.9), (2, 0.35, 0.5), (3, 0.15, 0.3), (4, 0.06, 0.2)])
+              for k, a, tau in [(1, 1.0, 0.9), (2, 0.35 * BRIGHT, 0.5), (3, 0.15 * BRIGHT, 0.3),
+                                (4, 0.06 * BRIGHT, 0.2), (5, 0.03 * BRIGHT ** 2, 0.12)])
     return att * sig
 
 
@@ -132,7 +144,13 @@ def main():
     ap.add_argument("--outro", type=float, required=True, help="片尾開始的秒數")
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--seed", type=int, default=11)
+    ap.add_argument("--mood", choices=MOODS, default="uplift")
     args = ap.parse_args()
+    global BPM, BEAT, BAR, CHORDS, BRIGHT
+    m = MOODS[args.mood]
+    BPM, CHORDS, BRIGHT = m["bpm"], m["chords"], m["bright"]
+    BEAT = 60 / BPM
+    BAR = BEAT * 4
     rng = np.random.default_rng(args.seed)
     sections = [float(s) for s in args.sections.split(",")]
     drums_from = sections[1] if len(sections) > 1 else BAR * 2
@@ -175,7 +193,7 @@ def main():
     add(L["pad"], end_t, pad([hz(m) for m in FINAL], 4.5, rng), 1.2)
     add(L["pno"], end_t, piano(hz(72), 4.0), 0.8)
 
-    mix = {"pno": 0.30, "pad": 0.55, "sub": 0.42, "kick": 0.40, "hat": 0.035, "fx": 0.30}
+    mix = {"pno": 0.30, "pad": 0.55, "sub": 0.42, "kick": 0.40, "hat": m["hat"], "fx": 0.30}
     pan = {"pno": -0.15, "pad": 0.0, "sub": 0.0, "kick": 0.0, "hat": 0.3, "fx": 0.0}
     left = sum(mix[k] * L[k] * np.sqrt(1 - pan[k]) for k in L)
     right = sum(mix[k] * L[k] * np.sqrt(1 + pan[k]) for k in L)
@@ -207,7 +225,7 @@ def main():
     if np.abs(y).max() > 0.95:
         y *= 0.95 / np.abs(y).max()
     write(args.out, y)
-    print(f"{args.out}  {args.dur}s  {BPM} BPM")
+    print(f"{args.out}  {args.dur}s  {BPM} BPM  {args.mood}")
 
 
 if __name__ == "__main__":
