@@ -15,6 +15,21 @@
 
 版面：字幕在胸口高度、上方常駐標題「BK 測試｜學員分享」與淡版權小字；Logo 放在片尾動畫（`assets/logo.png`）。
 
+### 在自己的電腦上使用（本地版 Claude Code）
+
+給在筆電上執行的 Claude：請照下列步驟準備環境（macOS 為例，Windows 用 winget / pip 對應安裝）。
+
+1. 影音與 Python：`brew install ffmpeg python@3.12`；
+   `pip3 install numpy scipy opencv-python-headless noisereduce "qrcode[pil]" zxing-cpp faster-whisper gdown`
+2. 字型：Noto Sans TC（`https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf`），
+   放在 `assets/fonts/`（不進版控）。
+3. 臉部偵測模型：`https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx`，
+   放在 `assets/models/`（不進版控）。
+4. 素材與成品：安裝「Google 雲端硬碟電腦版」，素材直接讀同步資料夾
+   「第七感影片剪輯素材」，成品直接輸出到其中的「成品」資料夾（會自動上傳，沒有檔案大小限制，
+   不需要再用下載頁或壓縮版）。
+5. 轉逐字稿用 faster-whisper 的 `large-v3`（第一次執行會自動下載模型）。
+
 ### 雲端資料夾
 
 - 素材：Google 雲端「第七感影片剪輯素材」（需維持「知道連結的人都能查看」，才能下載影片）
