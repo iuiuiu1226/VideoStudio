@@ -22,7 +22,7 @@
 
 ```sh
 # 0. 素材降噪（輸出到另一個資料夾，之後 --src 指到這裡）
-python3 tools/denoise.py --src <素材資料夾> --out <降噪後資料夾>
+python3 tools/denoise.py --src <素材資料夾> --out <降噪後資料夾> --config cuts/denoise.json
 
 # 1. 句尾留氣口（依音訊調整切點，可重複執行）
 python3 tools/breathe.py cuts/seg*.json --src <素材資料夾>

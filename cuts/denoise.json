@@ -1,0 +1,4 @@
+{
+  "default": {"strength": 1.0, "gate_below_db": 6, "gate_range_db": 22},
+  "IMG_0632.MOV": {"strength": 0.85, "gate_below_db": 16, "gate_range_db": 12}
+}
