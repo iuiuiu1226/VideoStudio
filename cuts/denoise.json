@@ -1,4 +1,9 @@
 {
   "default": {"strength": 1.0, "gate_below_db": 6, "gate_range_db": 22},
-  "IMG_0632.MOV": {"strength": 0.85, "gate_below_db": 16, "gate_range_db": 12}
+  "IMG_0632.MOV": {"strength": 0.85, "gate_below_db": 16, "gate_range_db": 12},
+  "1740215111.mp4": {
+    "strength": 0.85, "nstd": 2.5, "noise_pct": 8, "highpass": 120,
+    "eq": "equalizer=f=3800:t=q:w=1.0:g=3.5,equalizer=f=7000:t=q:w=1.0:g=1.5",
+    "gate_threshold": 0.008, "gate_ratio": 3, "gate_range_db": 12
+  }
 }
