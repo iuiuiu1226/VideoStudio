@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """BK 學員分享系列封面（固定版型，直式 1080x1920）。
 
-版型：學員畫面當背景（下方漸層轉深色）→ 上方系列標籤與集數 → 中下方金句大標
-     → 副標 → 底部 Logo 與品牌名。重要內容都在中間 3:4 範圍內（y 285–1635），
-     IG 個人頁格狀牆裁成 3:4 時不會被切到。
+版型：學員畫面當背景（下方漸層轉深色）→ 上方「Logo＋系列標籤」一列 → 中下方標題 → 副標。
+     標題與副標都在畫面正中的 1:1 範圍內（y 420–1500），IG／FB 格狀牆不論裁成 3:4
+     或正方形都不會被切到；Logo 與系列標籤那列在 3:4 內完整，正方形時整列裁掉、不會只剩一半。
 每一集只要換設定檔裡的畫面、標題（lines）與副標。
 
 用法：
@@ -64,16 +64,18 @@ def main():
     img.alpha_composite(Image.fromarray(ov, "RGBA"))
     d = ImageDraw.Draw(img)
 
-    # 系列標籤＋集數
+    # 系列標籤列：小 Logo＋「BK 測試｜學員分享」，整組置中（在 3:4 範圍內，正方形時整列裁掉）
     f_tag = font(args.font, 44, 700)
     tag = cfg.get("series", "BK 測試｜學員分享")
-    text_shadow(img, (W // 2, 340), tag, f_tag, GOLD, blur=6)
+    ty = cfg.get("tag_y", 345)
+    logo = Image.open(cfg["logo"]).convert("RGBA")
+    lh2 = cfg.get("logo_h", 72)
+    logo = logo.resize((int(logo.width * lh2 / logo.height), lh2), Image.LANCZOS)
     tw = d.textlength(tag, font=f_tag)
-    for side in (-1, 1):
-        x0 = W // 2 + side * (tw / 2 + 30)
-        d.line([(x0, 340), (x0 + side * 90, 340)], fill=GOLD + (255,), width=3)
-    if cfg.get("vol"):
-        text_shadow(img, (W // 2, 425), cfg["vol"], font(args.font, 34, 500), (230, 230, 230), blur=6)
+    gap = 18
+    x0 = int(W / 2 - (logo.width + gap + tw) / 2)
+    img.alpha_composite(logo, (x0, ty - lh2 // 2))
+    text_shadow(img, (x0 + logo.width + gap, ty), tag, f_tag, GOLD, anchor="lm", blur=6)
 
     # 標題：多行、每行可設大小與顏色（white / gold），太寬會自動縮小到 MAX_TEXT_W 內
     y = cfg.get("quote_top", 1000)
@@ -92,13 +94,10 @@ def main():
         y += 24
         text_shadow(img, (W // 2, y + 25), cfg["sub"], font(args.font, 48, 500), (225, 228, 235), blur=8)
 
-    # 底部 Logo＋品牌
-    logo = Image.open(cfg["logo"]).convert("RGBA")
-    lh2 = 120
-    logo = logo.resize((int(logo.width * lh2 / logo.height), lh2), Image.LANCZOS)
-    img.alpha_composite(logo, (W // 2 - logo.width // 2, 1440))
-    text_shadow(img, (W // 2, 1600), cfg.get("brand", "第七感人生智慧學"), font(args.font, 40, 600), GOLD,
-                blur=6)
+    # 品牌文字預設不放（片尾與版權小字已有），需要時設 "brand"
+    if cfg.get("brand"):
+        text_shadow(img, (W // 2, cfg.get("brand_y", 1440)), cfg["brand"], font(args.font, 40, 600), GOLD,
+                    blur=6)
 
     img.convert("RGB").save(args.out, quality=93)
     print(args.out)
