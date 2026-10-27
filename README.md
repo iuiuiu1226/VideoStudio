@@ -17,7 +17,7 @@
 
 ### 工具
 
-需要 `ffmpeg`、Python 套件 `numpy`、`opencv-python-headless`、`noisereduce`、`qrcode[pil]`，
+需要 `ffmpeg`、Python 套件 `numpy`、`scipy`、`opencv-python-headless`、`noisereduce`、`qrcode[pil]`，
 字型為 Noto Sans TC，臉部偵測模型為 OpenCV YuNet（`face_detection_yunet_2023mar.onnx`）。
 
 ```sh
@@ -43,6 +43,10 @@ python3 tools/cover.py cuts/cover_vol01.json --src <素材資料夾> --font <字
 python3 tools/build_segment.py cuts/seg1_hook.json cuts/seg2_how.json cuts/seg3_why.json \
     cuts/seg4_feel.json cuts/seg5_use.json cuts/seg6_end.json \
     --src <降噪後資料夾> --font <字型資料夾> -o output/完整版.mp4
+
+# 5. 背景音樂（原創合成，無版權問題）並混音：講話時自動壓低，片尾浮上來
+python3 tools/bgm.py --dur <成片秒數> --outro <片尾開始秒數> -o output/bgm.wav
+python3 tools/mix_bgm.py output/完整版.mp4 output/bgm.wav -o output/完整版_配樂.mp4
 ```
 
 剪輯清單欄位：`src` 素材檔、`in`/`out` 切點（秒）、`subs` 字幕（時間以片段開頭為 0）、
