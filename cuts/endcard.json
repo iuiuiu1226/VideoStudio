@@ -6,13 +6,46 @@
   "bg": "0x0D1018",
   "qr": "assets/line_qr.png",
   "qr_size": 340,
-  "qr_y": 1250,
+  "qr_y": 1230,
   "qr_start": 2.0,
   "lines": [
-    {"text": "第七感人生智慧學", "y": 700, "size": 76, "color": "D9B45A", "start": 0.7, "spacing": 8},
-    {"text": "BK 測試｜一日工作坊", "y": 800, "size": 54, "color": "FFFFFF", "start": 1.2},
-    {"text": "下次活動　2026/12/13（日）", "y": 940, "size": 48, "color": "D9B45A", "start": 1.6},
-    {"text": "掃描加入官方 LINE　@191cgbjs", "y": 1460, "size": 42, "color": "C8CCD4", "start": 2.0, "bold": false},
-    {"text": "© 第七感人生智慧學 版權所有", "y": 1640, "size": 30, "color": "7A808C", "start": 2.4, "bold": false}
+    {
+      "text": "第七感人生智慧學",
+      "y": 700,
+      "size": 76,
+      "color": "D9B45A",
+      "start": 0.7,
+      "spacing": 8
+    },
+    {
+      "text": "BK 測試｜一日工作坊",
+      "y": 800,
+      "size": 54,
+      "color": "FFFFFF",
+      "start": 1.2
+    },
+    {
+      "text": "下次活動　2026/12/13（日）",
+      "y": 940,
+      "size": 48,
+      "color": "D9B45A",
+      "start": 1.6
+    },
+    {
+      "text": "掃描加入官方 LINE　@191cgbjs",
+      "y": 1490,
+      "size": 42,
+      "color": "C8CCD4",
+      "start": 2.0,
+      "bold": false
+    },
+    {
+      "text": "© 第七感人生智慧學 版權所有",
+      "y": 1680,
+      "size": 30,
+      "color": "7A808C",
+      "start": 2.4,
+      "bold": false
+    }
   ]
 }

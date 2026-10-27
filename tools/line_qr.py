@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""產生 LINE 官方樣式的 QR code（綠色圓點、圓角定位框、中央 LINE 字樣、白色圓角底）。
+"""產生 LINE 官方樣式的 QR code（圓點、圓角定位框、中央 LINE 字樣、白色圓角底）。
 
 用法：
-  python3 tools/line_qr.py --id @191cgbjs --font <字型檔> -o assets/line_qr.png
+  python3 tools/line_qr.py --url https://lin.ee/Q2k2s7M --color black --font <字型檔> -o assets/line_qr.png
+  （--url 用 LINE 後台提供的官方短網址；沒有時可改用 --id @帳號）
 """
 import argparse
 import urllib.parse
@@ -10,18 +11,21 @@ import urllib.parse
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 
-GREEN = (6, 199, 85)
+COLORS = {"green": (6, 199, 85), "black": (0, 0, 0)}
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--id", required=True, help="LINE 官方帳號 ID，例如 @191cgbjs")
+    ap.add_argument("--url", help="LINE 官方短網址，例如 https://lin.ee/Q2k2s7M（優先使用）")
+    ap.add_argument("--id", help="LINE 官方帳號 ID，例如 @191cgbjs")
+    ap.add_argument("--color", choices=COLORS, default="black")
     ap.add_argument("--font", required=True)
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--box", type=int, default=24, help="每一格的像素")
     args = ap.parse_args()
 
-    url = "https://line.me/R/ti/p/" + urllib.parse.quote(args.id)
+    url = args.url or "https://line.me/R/ti/p/" + urllib.parse.quote(args.id)
+    GREEN = COLORS[args.color]
     q = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_H, border=0)
     q.add_data(url)
     q.make(fit=True)

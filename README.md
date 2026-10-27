@@ -34,7 +34,7 @@ python3 tools/autoframe.py cuts/seg*.json --src <素材資料夾> --model <yunet
 python3 tools/endcard.py cuts/endcard.json --font <字型資料夾> -o output/endcard.mp4
 
 # LINE 官方樣式 QR code（片尾用）
-python3 tools/line_qr.py --id @191cgbjs --font <字型檔> -o assets/line_qr.png
+python3 tools/line_qr.py --url https://lin.ee/Q2k2s7M --color black --font <字型檔> -o assets/line_qr.png
 
 # 封面（固定版型，每集換 cuts/cover_volXX.json）
 python3 tools/cover.py cuts/cover_vol01.json --src <素材資料夾> --font <字型檔> -o output/cover_vol01.jpg
