@@ -12,6 +12,7 @@
   dur：總長（秒）
   bg：底色
   lines：[{"text", "y", "size", "color", "start"}]，color 為 RRGGBB，start 為淡入開始秒數
+  qr, qr_size, qr_y, qr_start：（選用）QR code 圖檔、邊長、中心垂直位置、淡入開始秒數
 """
 import argparse
 import json
@@ -70,13 +71,23 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     grow = f"(0.94+0.06*(1-pow(1-min(t/1.6\\,1)\\,3)))"
     graph = (f"[1:v]format=rgba,scale=w=-2:h='{lh}*{grow}':eval=frame,"
              f"fade=t=in:st=0.15:d=0.9:alpha=1[lg];"
-             f"[0:v][lg]overlay=x=(W-w)/2:y={ly}-h/2:eval=frame:shortest=1,"
-             f"subtitles={ass}:fontsdir={args.font},format=yuv420p[vo]")
+             f"[0:v][lg]overlay=x=(W-w)/2:y={ly}-h/2:eval=frame:shortest=1[bg1];")
+    extra = []
+    if cfg.get("qr"):
+        qs, qy = cfg.get("qr_size", 300), cfg.get("qr_y", 1250)
+        extra = ["-loop", "1", "-framerate", str(FPS), "-i", cfg["qr"]]
+        graph += (f"[3:v]format=rgba,scale={qs}:{qs}:flags=area,"
+                  f"fade=t=in:st={cfg.get('qr_start', 1.8)}:d={FADE}:alpha=1[qr];"
+                  f"[bg1][qr]overlay=x=(W-w)/2:y={qy}-h/2:shortest=1[bg2];")
+    else:
+        graph += "[bg1]null[bg2];"
+    graph += f"[bg2]subtitles={ass}:fontsdir={args.font},format=yuv420p[vo]"
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     subprocess.run(["ffmpeg", "-v", "error", "-y",
                     "-f", "lavfi", "-i", f"color=c={cfg.get('bg', '0x0E1118')}:s={W}x{H}:r={FPS}:d={dur}",
                     "-loop", "1", "-framerate", str(FPS), "-i", cfg["logo"],
                     "-f", "lavfi", "-i", f"anullsrc=r=48000:cl=stereo:d={dur}",
+                    *extra,
                     "-filter_complex", graph, "-map", "[vo]", "-map", "2:a",
                     "-t", str(dur), "-c:v", "libx264", "-preset", "slow", "-crf", "16",
                     "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", args.out],
