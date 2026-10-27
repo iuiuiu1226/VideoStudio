@@ -70,10 +70,11 @@ python3 tools/build_segment.py cuts/seg1_hook.json cuts/seg2_how.json cuts/seg3_
 python3 tools/check_loudness.py output/完整版.mp4 cuts/seg1_hook.json cuts/seg2_how.json cuts/seg3_why.json cuts/seg4_feel.json cuts/seg5_use.json
 
 # 5. 背景音樂並混音：講話時自動壓低，片尾浮上來
-#    v12 正式版用 Pixabay「Clockwork Pulse」（trangiahung159，117 BPM、G 小調），
+#    v13 正式版用 Pixabay「Clockwork Pulse」（trangiahung159，117 BPM、G 小調），
 #    從 24.03 秒的小節起點開始，讓曲子自然的結尾落在片尾；音樂響度先調到 -18 LUFS，
-#    混音參數 --music-db 2 --music-eq "equalizer=f=2200:t=q:w=1.0:g=-5,equalizer=f=1000:t=q:w=1.2:g=-3"
-#    （講話時音樂約比人聲低 11 dB，與參考的 IG Reels 相近）
+#    再用 tools/level_music.py 拉平段落音量（--keep-tail 1.5），
+#    混音參數 --no-duck --music-db -18.1 --music-eq "equalizer=f=2200:t=q:w=1.0:g=-5,equalizer=f=1000:t=q:w=1.2:g=-3"
+#    （音樂固定音量、不隨人聲忽大忽小，約比人聲低 18 dB，當單純的背景）
 #    也可用原創合成：tools/bgm.py、tools/bgm_bright.py、tools/bgm_reveal.py
 python3 tools/bgm.py --dur <成片秒數> --outro <片尾開始秒數> -o output/bgm.wav
 python3 tools/mix_bgm.py output/完整版.mp4 output/bgm.wav -o output/完整版_配樂.mp4

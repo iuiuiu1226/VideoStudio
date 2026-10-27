@@ -4,7 +4,7 @@
   - 音樂基準音量 --music-db（相對音樂原始響度的增益，預設 -7 dB，講話時約比人聲低 20 dB）
   - 人聲出現時再壓低約 4–6 dB；沒人講話（例如片尾）時恢復
   - --music-eq：音樂先過等化，例如在人聲最需要的中頻讓出空間（音樂存在感不變、人聲更清楚）
-  - --duck-ratio：講話時壓低音樂的力道（壓縮比）
+  - --duck-ratio：講話時壓低音樂的力道（壓縮比）；--no-duck 則音樂維持固定音量（不會忽大忽小）
   - 最後加限幅器，避免爆音；影像串流直接複製
 
 用法：
@@ -22,12 +22,14 @@ def main():
     ap.add_argument("--music-db", type=float, default=-7.0)
     ap.add_argument("--music-eq", default="", help="音樂的等化（ffmpeg 濾鏡字串）")
     ap.add_argument("--duck-ratio", type=float, default=3.0)
+    ap.add_argument("--no-duck", action="store_true", help="音樂固定音量，不隨人聲壓低")
     args = ap.parse_args()
 
     graph = ("[0:a]aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[v][key];"
              f"[1:a]aformat=sample_rates=48000:channel_layouts=stereo,"
              f"{args.music_eq + ',' if args.music_eq else ''}volume={args.music_db}dB[m];"
-             f"[m][key]sidechaincompress=threshold=0.02:ratio={args.duck_ratio}:attack=40:release=800:knee=4[duck];"
+             + ("[key]anullsink;[m]anull[duck];" if args.no_duck else
+                f"[m][key]sidechaincompress=threshold=0.02:ratio={args.duck_ratio}:attack=40:release=800:knee=4[duck];") +
              "[v][duck]amix=inputs=2:duration=first:normalize=0,"
              "alimiter=limit=0.89:level=false[a]")
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", args.video, "-i", args.music,
