@@ -4,7 +4,7 @@
 版型：學員畫面當背景（下方漸層轉深色）→ 上方系列標籤與集數 → 中下方金句大標
      → 副標 → 底部 Logo 與品牌名。重要內容都在中間 3:4 範圍內（y 285–1635），
      IG 個人頁格狀牆裁成 3:4 時不會被切到。
-每一集只要換設定檔裡的畫面、金句與副標（集數建議寫在副標，例如「VOL.02｜…」）。
+每一集只要換設定檔裡的畫面、標題（lines）與副標。
 
 用法：
   python3 tools/cover.py cuts/cover_vol01.json --src <素材資料夾> --font <字型檔> -o output/cover_vol01.jpg
@@ -19,6 +19,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 W, H = 1080, 1920
 GOLD = (217, 180, 90)
 NAVY = (13, 16, 24)
+MAX_TEXT_W = 960
 
 
 def grab(src, t, frame):
@@ -74,18 +75,22 @@ def main():
     if cfg.get("vol"):
         text_shadow(img, (W // 2, 425), cfg["vol"], font(args.font, 34, 500), (230, 230, 230), blur=6)
 
-    # 金句大標（可多行，以 \n 分行；用「」包起來的字會上金色）
-    f_big = font(args.font, cfg.get("quote_size", 128), 900)
-    lines = cfg["quote"].split("\n")
-    lh = int(cfg.get("quote_size", 128) * 1.25)
-    y0 = cfg.get("quote_y", 1180) - lh * (len(lines) - 1) // 2
-    for i, ln in enumerate(lines):
-        text_shadow(img, (W // 2, y0 + i * lh), ln, f_big,
-                    GOLD if ln in cfg.get("gold_lines", []) else (255, 255, 255), blur=14, alpha=200)
+    # 標題：多行、每行可設大小與顏色（white / gold），太寬會自動縮小到 MAX_TEXT_W 內
+    y = cfg.get("quote_top", 1000)
+    for ln in cfg["lines"]:
+        size = ln.get("size", 110)
+        f = font(args.font, size, ln.get("weight", 900))
+        while d.textlength(ln["text"], font=f) > MAX_TEXT_W and size > 40:
+            size -= 2
+            f = font(args.font, size, ln.get("weight", 900))
+        color = GOLD if ln.get("color") == "gold" else (255, 255, 255)
+        y += int(size * 0.5)
+        text_shadow(img, (W // 2, y), ln["text"], f, color, blur=14, alpha=200)
+        y += int(size * 0.5) + ln.get("gap", 26)
     # 副標
     if cfg.get("sub"):
-        yb = y0 + (len(lines) - 1) * lh + int(lh * 0.85)
-        text_shadow(img, (W // 2, yb), cfg["sub"], font(args.font, 50, 500), (225, 228, 235), blur=8)
+        y += 24
+        text_shadow(img, (W // 2, y + 25), cfg["sub"], font(args.font, 48, 500), (225, 228, 235), blur=8)
 
     # 底部 Logo＋品牌
     logo = Image.open(cfg["logo"]).convert("RGBA")

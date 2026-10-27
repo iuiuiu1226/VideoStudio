@@ -8,13 +8,23 @@
     "h": 1732.0
   },
   "series": "BK 測試｜學員分享",
-  "quote": "鐵齒的我\n測完說：\n原來龍是真的",
-  "gold_lines": [
-    "原來龍是真的"
-  ],
-  "quote_size": 120,
-  "quote_y": 1120,
-  "sub": "VOL.01｜四位學員的真實體驗",
+  "sub": "四位學員的真實體驗",
   "logo": "assets/logo.png",
-  "brand": "第七感人生智慧學"
+  "brand": "第七感人生智慧學",
+  "quote_top": 990,
+  "lines": [
+    {
+      "text": "鐵齒的我測試完",
+      "size": 86,
+      "color": "white",
+      "weight": 800,
+      "gap": 30
+    },
+    {
+      "text": "原來龍是真的存在",
+      "size": 118,
+      "color": "gold",
+      "weight": 900
+    }
+  ]
 }
