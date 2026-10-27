@@ -15,6 +15,13 @@
 
 版面：字幕在胸口高度、上方常駐標題「BK 測試｜學員分享」與淡版權小字；Logo 放在片尾動畫（`assets/logo.png`）。
 
+### 雲端資料夾
+
+- 素材：Google 雲端「第七感影片剪輯素材」（需維持「知道連結的人都能查看」，才能下載影片）
+- 成品：同資料夾底下的「成品」子資料夾（id `1G9t80ewuoVaK74KBOiPiojHsbNsOlpJm`）。
+  腳本等文字檔可透過 Google Drive 連接器直接存入；影片太大無法經過對話，
+  改由下載頁（Artifact）上的按鈕在瀏覽器端上傳（單檔 16 MB 以內，需先輸出壓縮版）。
+
 ### 工具
 
 需要 `ffmpeg`、Python 套件 `numpy`、`scipy`、`opencv-python-headless`、`noisereduce`、`qrcode[pil]`，
