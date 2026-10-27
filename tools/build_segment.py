@@ -8,6 +8,8 @@
 剪輯清單格式見 cuts/seg1_hook.json：
   每個 clip 指定 src、in、out（秒）、zoom（1.0 = 原始畫面），
   subs 是字幕列表，時間以「該 clip 的 in 點」為 0。
+  frame 是固定裁切框；frame_keys 是逐格裁切框（t 為素材秒數，之間線性內插）；
+  v_in 讓畫面取自另一個時間點（聲音仍從 in 開始）。
   問題字卡：{"card": "文字", "dur": 秒數}，深色底置中白字、無聲。
 """
 import argparse
@@ -36,6 +38,15 @@ def measure_lufs(src, start, dur):
         return float(vals[-1])
     except (IndexError, ValueError):
         return None
+
+
+def lerp_expr(keys, k):
+    """把關鍵框的某個欄位寫成 ffmpeg 運算式（變數 it = 片段內的秒數），關鍵框之間線性內插。"""
+    expr = f"{keys[-1][k]:.1f}"
+    for a, b in reversed(list(zip(keys, keys[1:]))):
+        expr = (f"if(lt(it,{b['t']:.3f}),"
+                f"{a[k]:.1f}+({b[k] - a[k]:.1f})*(it-{a['t']:.3f})/{b['t'] - a['t']:.3f},{expr})")
+    return f"if(lt(it,{keys[0]['t']:.3f}),{keys[0][k]:.1f},{expr})"
 
 
 def ass_time(t):
@@ -103,7 +114,20 @@ def main():
             inputs += ["-ss", f"{c['in']}", "-t", f"{dur + 0.2}", "-i", src]
             vi = ai = n_in
             n_in += 1
-            if "frame" in c:
+            if "v_in" in c:
+                # 畫面取自另一個時間點（例如聲音先進來，畫面還停在全場舉手的鏡頭）
+                inputs += ["-ss", f"{c['v_in']}", "-t", f"{dur + 0.2}", "-i", src]
+                vi = n_in
+                n_in += 1
+            if "frame_keys" in c:
+                # 逐格裁切框（拍攝時鏡頭推拉，用來把人物大小補償回來）：
+                # [{"t", "x", "y", "h"}, ...]，t 是素材時間（秒），之間線性內插；寬度固定為 h 的 9/16
+                v0 = c.get("v_in", c["in"])
+                keys = [{**k, "t": k["t"] - v0} for k in c["frame_keys"]]
+                vf = (f"zoompan=z='ih/({lerp_expr(keys, 'h')})'"
+                      f":x='{lerp_expr(keys, 'x')}':y='{lerp_expr(keys, 'y')}'"
+                      f":d=1:s={W}x{H}:fps={FPS},format=yuv420p,setsar=1")
+            elif "frame" in c:
                 # tools/autoframe.py 算好的裁切框：同一人各段大小、位置一致
                 fr = c["frame"]
                 vf = (f"crop={fr['w']:.1f}:{fr['h']:.1f}:{fr['x']:.1f}:{fr['y']:.1f},"

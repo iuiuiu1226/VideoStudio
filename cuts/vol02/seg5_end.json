@@ -1,0 +1,21 @@
+{
+  "name": "VOL.02 片尾（與 VOL.01 相同）",
+  "style": {
+    "font": "Noto Sans TC",
+    "size": 78,
+    "outline": 4,
+    "shadow": 1,
+    "margin_v": 660,
+    "title": "BK 測試｜學員分享",
+    "note": "第七感人生智慧學"
+  },
+  "clips": [
+    {
+      "id": "#endcard",
+      "src": "output/endcard.mp4",
+      "in": 0.0,
+      "out": 7.0,
+      "no_overlay": true
+    }
+  ]
+}

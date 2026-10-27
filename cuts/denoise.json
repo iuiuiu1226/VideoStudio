@@ -1,9 +1,38 @@
 {
-  "default": {"strength": 1.0, "gate_below_db": 6, "gate_range_db": 22},
-  "IMG_0632.MOV": {"strength": 0.85, "gate_below_db": 16, "gate_range_db": 12},
+  "default": {
+    "strength": 1.0,
+    "gate_below_db": 6,
+    "gate_range_db": 22
+  },
+  "IMG_0632.MOV": {
+    "strength": 0.85,
+    "gate_below_db": 16,
+    "gate_range_db": 12
+  },
   "1740215111.mp4": {
-    "strength": 0.85, "nstd": 2.5, "noise_pct": 8, "highpass": 120,
+    "strength": 0.85,
+    "nstd": 2.5,
+    "noise_pct": 8,
+    "highpass": 120,
     "eq": "equalizer=f=3800:t=q:w=1.0:g=3.5,equalizer=f=7000:t=q:w=1.0:g=1.5",
-    "gate_threshold": 0.008, "gate_ratio": 3, "gate_range_db": 12
+    "gate_threshold": 0.008,
+    "gate_ratio": 3,
+    "gate_range_db": 12
+  },
+  "IMG_6532.MOV": {
+    "strength": 0.8,
+    "nstd": 2.0,
+    "highpass": 100,
+    "eq": "equalizer=f=3500:t=q:w=1.0:g=3,equalizer=f=250:t=q:w=1.0:g=-2",
+    "gate_below_db": 14,
+    "gate_range_db": 10
+  },
+  "IMG_6532_soft.MOV": {
+    "strength": 0.5,
+    "nstd": 2.5,
+    "highpass": 100,
+    "eq": "equalizer=f=3500:t=q:w=1.0:g=3,equalizer=f=250:t=q:w=1.0:g=-2",
+    "gate_below_db": 18,
+    "gate_range_db": 6
   }
 }
