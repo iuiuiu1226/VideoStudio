@@ -8,7 +8,7 @@
 
 | 版本 | 長度 | 用途 | 剪輯清單 |
 |---|---|---|---|
-| 完整版 | 約 94 秒 | Facebook、LINE | `cuts/seg1_hook.json` … `cuts/seg6_end.json` 依序接起來 |
+| 完整版 v11（正式版，無配樂） | 93.5 秒 | Facebook、LINE | `cuts/seg1_hook.json` … `cuts/seg6_end.json` 依序接起來；配樂由使用者自行處理 |
 | 精簡版 | 討論中 | IG Reels、TikTok、YouTube Shorts | `cuts/short60.json`（舊版，暫停使用） |
 
 段落：鉤子（龍是真的）→ 怎麼測出來的 → 肌肉連動潛意識 → 親身體驗 → 生活怎麼用 → 片尾動畫
@@ -70,7 +70,8 @@ python3 tools/build_segment.py cuts/seg1_hook.json cuts/seg2_how.json cuts/seg3_
 python3 tools/check_loudness.py output/完整版.mp4 cuts/seg1_hook.json cuts/seg2_how.json cuts/seg3_why.json cuts/seg4_feel.json cuts/seg5_use.json
 
 # 5. 背景音樂並混音：講話時自動壓低，片尾浮上來
-#    v13 正式版用 Pixabay「Clockwork Pulse」（trangiahung159，117 BPM、G 小調），
+#    （正式版 v11 不放配樂。以下為曾試過的做法，供之後參考）
+#    v13 試做版用 Pixabay「Clockwork Pulse」（trangiahung159，117 BPM、G 小調），
 #    從 24.03 秒的小節起點開始，讓曲子自然的結尾落在片尾；音樂響度先調到 -18 LUFS，
 #    再用 tools/level_music.py 拉平段落音量（--keep-tail 1.5），
 #    混音參數 --no-duck --music-db -18.1 --music-eq "equalizer=f=2200:t=q:w=1.0:g=-5,equalizer=f=1000:t=q:w=1.2:g=-3"
