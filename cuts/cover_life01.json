@@ -1,0 +1,29 @@
+{
+  "src": "IMG_6532.MOV",
+  "t": 83.5,
+  "frame": {
+    "x": 512.4,
+    "y": 998.4,
+    "w": 1237.5,
+    "h": 2200.0
+  },
+  "series": "BK 測試｜生活應用",
+  "sub": "用身體測出真假跟好壞",
+  "logo": "assets/logo.png",
+  "quote_top": 990,
+  "lines": [
+    {
+      "text": "直播賣的精品",
+      "size": 86,
+      "color": "white",
+      "weight": 800,
+      "gap": 30
+    },
+    {
+      "text": "測完很多是假的",
+      "size": 118,
+      "color": "gold",
+      "weight": 900
+    }
+  ]
+}
