@@ -27,5 +27,5 @@
     }
   ],
   "prefilter": "atadenoise=s=9:0a=0.04:0b=0.08:1a=0.04:1b=0.08:2a=0.04:2b=0.08",
-  "grade": "curves=master='0/0.02 0.25/0.38 0.5/0.70 0.75/0.89 1/1',eq=saturation=0.9,colortemperature=temperature=7800:mix=0.45,colorbalance=rm=0.04:gm=-0.01:bm=0.02,vibrance=intensity=0.25,unsharp=5:5:1.0:5:5:0,unsharp=9:9:0.5:5:5:0"
+  "grade": "unsharp=5:5:1.0:5:5:0,unsharp=9:9:0.5:5:5:0"
 }
