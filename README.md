@@ -9,6 +9,7 @@
 | 版本 | 長度 | 用途 | 剪輯清單 |
 |---|---|---|---|
 | 完整版 v11（正式版，無配樂） | 93.5 秒 | Facebook、LINE | `cuts/seg1_hook.json` … `cuts/seg6_end.json` 依序接起來；配樂由使用者自行處理 |
+| 配樂版 v12 | 93.5 秒 | 同上 | v11 加動感配樂 `assets/music/energetic_sport.mp3`（從 13 秒開始、`level_music.py` 拉平），`mix_bgm.py --rel -17 --no-duck --lufs -14`：配樂固定音量、比人聲低 17 dB，整支 -14 LUFS |
 | 精簡版 | 討論中 | IG Reels、TikTok、YouTube Shorts | `cuts/short60.json`（舊版，暫停使用） |
 
 段落：鉤子（龍是真的）→ 怎麼測出來的 → 肌肉連動潛意識 → 親身體驗 → 生活怎麼用 → 片尾動畫
