@@ -25,5 +25,6 @@
       "color": "gold",
       "weight": 900
     }
-  ]
+  ],
+  "grade": "eq=contrast=1.08:saturation=1.12:gamma=0.91,vibrance=intensity=0.35,colortemperature=temperature=5200:mix=0.7"
 }

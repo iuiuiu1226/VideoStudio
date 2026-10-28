@@ -8,8 +8,11 @@
     "strength": 0.9,
     "nonstat": 2.0,
     "highpass": 90,
-    "gate_below_db": 18,
-    "gate_range_db": 24
+    "rnnoise": "sh",
+    "rnn_mix": 0.7,
+    "eq": "highshelf=f=5000:g=-6,lowpass=f=7000:poles=2",
+    "gate_below_db": 28,
+    "gate_range_db": 30
   },
   "1740215111.mp4": {
     "strength": 0.85,

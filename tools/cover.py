@@ -5,6 +5,7 @@
      標題與副標都在畫面正中的 1:1 範圍內（y 420–1500），IG／FB 格狀牆不論裁成 3:4
      或正方形都不會被切到；Logo 與系列標籤那列在 3:4 內完整，正方形時整列裁掉、不會只剩一半。
 每一集只要換設定檔裡的畫面、標題（lines）與副標。
+grade（選填）是額外的調色（ffmpeg 濾鏡字串），例如臉色太蒼白時加一點對比、自然飽和度與暖色。
 
 用法：
   python3 tools/cover.py cuts/cover_vol01.json --src <素材資料夾> --font <字型檔> -o output/cover_vol01.jpg
@@ -24,11 +25,13 @@ NAVY = (13, 16, 24)
 MAX_TEXT_W = 960
 
 
-def grab(src, t, frame):
+def grab(src, t, frame, grade=None):
     vf = f"crop={frame['w']}:{frame['h']}:{frame['x']}:{frame['y']},scale={W}:{H}:flags=lanczos"
     trc = is_hdr(src)
     if trc:
         vf += "," + tonemap_chain(trc).rstrip(",")  # HDR 素材先轉成一般畫面，顏色才不會偏亮偏淡
+    if grade:
+        vf += "," + grade
     raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", src, "-frames:v", "1",
                           "-vf", vf, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
                          capture_output=True, check=True).stdout
@@ -58,7 +61,7 @@ def main():
     args = ap.parse_args()
     cfg = json.load(open(args.config, encoding="utf-8"))
 
-    img = grab(f"{args.src}/{cfg['src']}", cfg["t"], cfg["frame"]).convert("RGBA")
+    img = grab(f"{args.src}/{cfg['src']}", cfg["t"], cfg["frame"], cfg.get("grade")).convert("RGBA")
     # 漸層：上方略暗，中段以下逐漸轉成深藍黑，讓文字清楚
     y = np.linspace(0, 1, H)[:, None]
     a = np.clip(0.25 + np.maximum(0, (y - 0.42) / 0.38) * 0.75, 0, 0.94)

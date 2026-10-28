@@ -17,6 +17,10 @@
   noise_pct       取整支最安靜的百分之幾當噪音樣本（預設 12）
   highpass        降噪前先濾掉這個頻率以下（Hz），適合低頻轟聲重的素材
   eq              降噪後的等化（ffmpeg 濾鏡字串），例如補回子音清晰度
+  rnnoise         再加一層人聲降噪（RNNoise，ffmpeg arnndn），值是模型名稱（assets/models/rnnoise/<名稱>.rnnn，
+                  setup.sh 會下載 sh）；rnn_mix 是混入比例 0–1（全量會吃字，IMG_0632 實測 0.7 字完整）。
+                  有設 rnnoise 時，噪音門改看 RNNoise 的輸出判斷有沒有人聲（側鏈噪音門）：
+                  RNNoise 輸出的空檔幾乎全靜，輕聲的字不會被誤判成空檔壓掉
   gate_below_db / gate_threshold   噪音門門檻：比人聲 p90 低幾 dB，或直接給絕對值（0–1）
   gate_range_db / gate_ratio       噪音門最多壓低幾 dB、壓縮比
 講話較輕、起伏大的人，或素材本身已被壓縮過的，要用溫和設定，否則子音、輕聲的字會被一起削掉
@@ -36,6 +40,7 @@ import noisereduce as nr
 import numpy as np
 
 SR = 48000
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE_BELOW_DB = 6.0   # 噪音門門檻：比人聲（p90）低多少
 GATE_RANGE_DB = 22.0  # 噪音門最多壓低多少
 EXTS = (".mov", ".mp4", ".m4v")
@@ -59,6 +64,36 @@ def load(path, highpass=None):
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-vn", *af, "-ac", "1", "-ar", str(SR),
                           "-f", "s16le", "-"], capture_output=True, check=True).stdout
     return np.frombuffer(raw, np.int16).astype(np.float32) / 32768
+
+
+def write_wav(path, y):
+    with wave.open(path, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        w.writeframes((np.clip(y, -1, 1) * 32767).astype(np.int16).tobytes())
+
+
+def ffx(y, af):
+    """把音訊陣列送過一串 ffmpeg 濾鏡"""
+    with tempfile.TemporaryDirectory() as td:
+        write_wav(td + "/a.wav", y)
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-i", td + "/a.wav", "-af", af, "-ac", "1", "-ar", str(SR),
+                              "-f", "s16le", "-"], capture_output=True, check=True).stdout
+    return np.frombuffer(raw, np.int16).astype(np.float32) / 32768
+
+
+def rnn_model(name):
+    path = name if name.endswith(".rnnn") else os.path.join(ROOT, "assets", "models", "rnnoise", name + ".rnnn")
+    if not os.path.exists(path):
+        raise SystemExit(f"找不到 RNNoise 模型 {path}，請先跑 sh tools/setup.sh")
+    return path
+
+
+def p90_db(y):
+    n = SR // 50  # 20ms
+    fr = y[: len(y) // n * n].reshape(-1, n)
+    return np.percentile(20 * np.log10(np.sqrt((fr ** 2).mean(axis=1)) + 1e-9), 90)
 
 
 def main():
@@ -92,25 +127,34 @@ def main():
         else:
             y = nr.reduce_noise(y=a, sr=SR, y_noise=quiet, stationary=True, prop_decrease=c["strength"],
                                 n_std_thresh_stationary=c["nstd"], n_fft=2048)
+        key = None
+        if c.get("rnnoise"):
+            model = rnn_model(c["rnnoise"])
+            key = ffx(a, f"arnndn=m={model}")  # 全量 RNNoise 只拿來判斷哪裡有人聲
+            y = ffx(y, f"arnndn=m={model}:mix={c.get('rnn_mix', 1.0)}")
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
             wav = tf.name
-        with wave.open(wav, "wb") as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(SR)
-            w.writeframes((np.clip(y, -1, 1) * 32767).astype(np.int16).tobytes())
+        write_wav(wav, y)
         post = [c["eq"]] if c.get("eq") else []
+        gate = ""
         if not args.no_gate:
-            # 人聲大小：降噪後 20ms 響度的 p90；門檻比它低 gate_below_db（或直接用 gate_threshold）
-            fr2 = y[: len(y) // n * n].reshape(-1, n)
-            p90 = np.percentile(20 * np.log10(np.sqrt((fr2 ** 2).mean(axis=1)) + 1e-9), 90)
-            thr = c.get("gate_threshold") or 10 ** ((p90 - c["gate_below_db"]) / 20)
-            post.append(f"agate=threshold={thr:.5f}:ratio={c['gate_ratio']}"
-                        f":range={10 ** (-c['gate_range_db'] / 20):.4f}:attack=6:release=250:knee=3")
-        if post:
+            # 人聲大小：20ms 響度的 p90（側鏈時看 RNNoise 輸出）；門檻比它低 gate_below_db（或直接用 gate_threshold）
+            thr = c.get("gate_threshold") or 10 ** ((p90_db(key if key is not None else y) - c["gate_below_db"]) / 20)
+            gate = (f"threshold={thr:.5f}:ratio={c['gate_ratio']}"
+                    f":range={10 ** (-c['gate_range_db'] / 20):.4f}:attack=6:release=250:knee=3")
+        if post or gate:
             processed = wav[:-4] + "_p.wav"
-            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-af", ",".join(post), processed],
-                           check=True)
+            chain = ",".join(post)
+            if key is not None and gate:
+                keywav = wav[:-4] + "_k.wav"
+                write_wav(keywav, key)
+                graph = f"[0:a]{chain + ',' if chain else ''}anull[m];[m][1:a]sidechaingate={gate}"
+                subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-i", keywav, "-filter_complex", graph,
+                                processed], check=True)
+                os.remove(keywav)
+            else:
+                af = ",".join(post + ([f"agate={gate}"] if gate else []))
+                subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-af", af, processed], check=True)
             os.replace(processed, wav)
         off = start_offset(src)
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-itsoffset", f"{off:.6f}", "-i", wav,
@@ -118,7 +162,7 @@ def main():
                         "-c:a", "aac", "-b:a", "256k", "-ac", "2", dst], check=True)
         os.remove(wav)
         print(f"{name}: 強度 {c['strength']}、nstd {c['nstd']}、高通 {c.get('highpass') or '-'}、"
-              f"EQ {'有' if c.get('eq') else '-'}、最多壓 {c['gate_range_db']}dB，"
+              f"EQ {'有' if c.get('eq') else '-'}、RNNoise {c.get('rnnoise') or '-'}、最多壓 {c['gate_range_db']}dB，"
               f"噪音樣本 {len(quiet) / SR:.1f}s，音軌延遲 {off:.3f}s → {dst}")
 
 
