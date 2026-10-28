@@ -2,6 +2,8 @@
 """Gemini API 共用呼叫（配音 Gemini TTS、配樂 Lyria 共用同一把金鑰）。
 
 金鑰只從環境變數 GEMINI_API_KEY 讀取；沒有的話再讀專案根目錄的 .env（.env 不進版控）。
+雲端環境用「網路密鑰」時，金鑰由網路代理在連到 generativelanguage.googleapis.com 時自動加上
+（header x-goog-api-key），程式讀不到金鑰是正常的，照樣送出即可。
 帳戶是預付制，餘額 0 時 API 會回 HTTP 402，要先到 AI Studio → Billing → Buy credits 儲值。
 """
 import base64
@@ -27,17 +29,17 @@ def api_key():
             name, _, value = line.strip().partition("=")
             if name.strip() == "GEMINI_API_KEY":
                 key = value.strip().strip('"').strip("'")
-    if not key:
-        raise ApiError("找不到 GEMINI_API_KEY：請設成環境變數，或寫進專案根目錄的 .env（不要寫進程式）")
-    return key
+    return key  # 空字串：交給網路代理加金鑰
 
 
 def post(body, retries=3, timeout=300):
     """送出一次 interactions 請求，回傳解析後的 JSON；429／5xx 會自動重試。"""
     data = json.dumps(body).encode("utf-8")
     for attempt in range(retries + 1):
-        req = urllib.request.Request(API_URL, data=data, method="POST", headers={
-            "Content-Type": "application/json", "x-goog-api-key": api_key()})
+        headers = {"Content-Type": "application/json"}
+        if api_key():
+            headers["x-goog-api-key"] = api_key()
+        req = urllib.request.Request(API_URL, data=data, method="POST", headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return json.loads(r.read().decode("utf-8"))
@@ -45,6 +47,10 @@ def post(body, retries=3, timeout=300):
             detail = e.read().decode("utf-8", "replace")[:500]
             if e.code == 402:
                 raise ApiError("HTTP 402：帳戶餘額不足，請到 AI Studio → Billing → Buy credits 儲值") from e
+            if e.code == 403 and "unregistered callers" in detail:
+                raise ApiError("HTTP 403：請求沒有帶到金鑰。請設定環境變數 GEMINI_API_KEY、專案根目錄的 .env，"
+                               "或雲端環境的網路密鑰（主機 generativelanguage.googleapis.com、"
+                               "header x-goog-api-key）") from e
             if e.code in (429, 500, 502, 503, 504) and attempt < retries:
                 time.sleep(2 ** (attempt + 1))
                 continue

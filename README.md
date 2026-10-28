@@ -59,7 +59,8 @@ tools/make_short.sh scripts/narration/test_3lines.txt scripts/narration/music_pr
 ```
 
 **金鑰**：到 aistudio.google.com 建 API 金鑰，放在環境變數 `GEMINI_API_KEY`
-（雲端環境：環境設定 → Network secrets／環境變數；自己的電腦：專案根目錄 `.env`，照 `.env.example`）。
+（雲端環境：環境設定 → 網路密鑰，主機 `generativelanguage.googleapis.com`、header `x-goog-api-key`，
+由網路代理自動加上金鑰，程式讀不到金鑰是正常的；自己的電腦：專案根目錄 `.env`，照 `.env.example`）。
 不要寫進程式、不要上傳 git（`.env` 已在 `.gitignore`）。帳戶是預付制，要先在 AI Studio → Billing → Buy credits 儲值，
 餘額 0 會回 HTTP 402。費用：80 秒旁白約台幣 1 元內；配樂一首約 0.08 美元。
 
