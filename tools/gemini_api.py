@@ -51,6 +51,9 @@ def post(body, retries=3, timeout=300):
                 raise ApiError("HTTP 403：請求沒有帶到金鑰。請設定環境變數 GEMINI_API_KEY、專案根目錄的 .env，"
                                "或雲端環境的網路密鑰（主機 generativelanguage.googleapis.com、"
                                "header x-goog-api-key）") from e
+            if e.code == 429 and "limit: 0" in detail:
+                raise ApiError("HTTP 429：免費額度不能用這個模型（每天 0 次）。請到 AI Studio 的 API 金鑰列表，"
+                               "按「Set up billing」設定付款並儲值") from e
             if e.code in (429, 500, 502, 503, 504) and attempt < retries:
                 time.sleep(2 ** (attempt + 1))
                 continue
