@@ -36,6 +36,20 @@
 - 降噪：一般設定 `IMG_6532.MOV`；她走到遠處的複訓段落用溫和設定 `IMG_6532_soft.MOV`
   （素材做一個同內容、檔名加 `_soft` 的連結，兩個都放進 `--src` 資料夾後一起降噪）
 
+### VOL.02（`IMG_6539.MOV`，主持人：前世今生）
+
+| 版本 | 長度 | 剪輯清單 |
+|---|---|---|
+| v1（無配樂） | 49 秒 | `cuts/life02/seg1_joke.json`、`cuts/life02/seg2_test.json`、`cuts/life02/seg3_end.json` |
+
+段落：前世今生、身邊的緣分 → 姊妹父母朋友，台下喊「寵物！」→「上輩子牠是我的老婆或老公，這次我當牠的主人」（全場笑）→
+都可以用能量測試測出來、也能測過去 → 學到這個技能可以回去自己測 → 片尾。逐字稿在 `scripts/逐字稿_IMG_6539_raw.txt`。
+
+- 搞笑元素只放在笑點：台下喊「寵物！」彈出字＋貓掌、「主人」亮黃放大＋鏡頭推近、大笑時「哈哈哈」（`fx`）
+- 主持人與手機距離一直變，大小用臉部追蹤平滑後逐格固定（`frame_keys`），音量用人聲頻段算出的音量曲線拉平（`gain_keys`），
+  整支用線性響度（`style.loudness = "linear"`），笑聲比講話略大
+- 降噪的噪音門改用絕對門檻（`gate_threshold`），以免把她較小聲的句子當成背景壓掉
+
 ### 在自己的電腦上使用（本地版 Claude Code）
 
 給在筆電上執行的 Claude：請照下列步驟準備環境（macOS 為例，Windows 用 winget / pip 對應安裝）。
@@ -103,6 +117,6 @@ python3 tools/mix_bgm.py output/完整版.mp4 output/bgm.wav -o output/完整版
 ```
 
 剪輯清單欄位：`src` 素材檔、`in`/`out` 切點（秒）、`subs` 字幕（時間以片段開頭為 0）、
-`frame` 裁切框（由 autoframe 產生）、`frame_keys` 逐格裁切框（`t` 為素材秒數，之間線性內插，用來補償拍攝時的推拉鏡頭）、`v_in` 畫面改取自這個時間點（聲音仍從 `in` 開始）、`in0`/`out0` 加氣口前的原始切點、
+`frame` 裁切框（由 autoframe 產生）、`frame_keys` 逐格裁切框（`t` 為素材秒數，之間線性內插，用來補償拍攝時的推拉鏡頭）、`v_in` 畫面改取自這個時間點（聲音仍從 `in` 開始）、`fx` 特效字（素材秒數，可含 ASS 動畫標籤）、`gain_keys` 段落內音量曲線、`auto_gain` 設 false 時不自動對齊音量、`in0`/`out0` 加氣口前的原始切點、
 `tail`/`lead` 氣口上限覆寫、`gain_db` 逐段音量微調、`card`/`dur` 純文字字卡、`no_overlay` 不放標題（片尾用）。
 `style` 裡可設 `title`、`note`、`logo` 等常駐元素。

@@ -10,6 +10,8 @@
   subs 是字幕列表，時間以「該 clip 的 in 點」為 0。
   frame 是固定裁切框；frame_keys 是逐格裁切框（t 為素材秒數，之間線性內插）；
   v_in 讓畫面取自另一個時間點（聲音仍從 in 開始）。
+  fx 是特效字（亮黃粗體、置中對齊，位置與動畫用 ASS 標籤寫在文字裡），時間是素材秒數。
+  gain_keys 是段落內的音量曲線（t 為素材秒數、db 為增益）；style.loudness = "linear" 時整支只做固定增益＋限幅。
   問題字卡：{"card": "文字", "dur": 秒數}，深色底置中白字、無聲。
 """
 import argparse
@@ -40,13 +42,13 @@ def measure_lufs(src, start, dur):
         return None
 
 
-def lerp_expr(keys, k):
-    """把關鍵框的某個欄位寫成 ffmpeg 運算式（變數 it = 片段內的秒數），關鍵框之間線性內插。"""
-    expr = f"{keys[-1][k]:.1f}"
+def lerp_expr(keys, k, var="it"):
+    """把關鍵框的某個欄位寫成 ffmpeg 運算式（var = 片段內的秒數），關鍵框之間線性內插。"""
+    expr = f"{keys[-1][k]:.2f}"
     for a, b in reversed(list(zip(keys, keys[1:]))):
-        expr = (f"if(lt(it,{b['t']:.3f}),"
-                f"{a[k]:.1f}+({b[k] - a[k]:.1f})*(it-{a['t']:.3f})/{b['t'] - a['t']:.3f},{expr})")
-    return f"if(lt(it,{keys[0]['t']:.3f}),{keys[0][k]:.1f},{expr})"
+        expr = (f"if(lt({var},{b['t']:.3f}),"
+                f"{a[k]:.2f}+({b[k] - a[k]:.2f})*({var}-{a['t']:.3f})/{b['t'] - a['t']:.3f},{expr})")
+    return f"if(lt({var},{keys[0]['t']:.3f}),{keys[0][k]:.2f},{expr})"
 
 
 def ass_time(t):
@@ -68,6 +70,7 @@ Style: Default,{style['font']},{style['size']},&H00FFFFFF,&H00FFFFFF,&H00202020,
 Style: Title,{style['font']},{style.get('title_size', 60)},&H00FFFFFF,&H00FFFFFF,&H00202020,&H80000000,-1,0,0,0,100,100,3,0,1,{style['outline']},{style['shadow']},{style.get('title_align', 8)},{style.get('title_margin_l', 80)},80,{style.get('title_margin', 200)},1
 Style: Note,{style['font']},{style.get('note_size', 32)},&H50FFFFFF,&H50FFFFFF,&H80202020,&H00000000,0,0,0,0,100,100,2,0,1,2,0,{style.get('title_align', 8)},{style.get('title_margin_l', 80)},80,{style.get('note_margin', 275)},1
 Style: Card,{style['font']},{style.get('card_size', 84)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,4,0,1,0,0,5,80,80,0,1
+Style: Fx,{style['font']},{style.get('fx_size', 96)},&H004DD8FF,&H004DD8FF,&H00202020,&H80000000,-1,0,0,0,100,100,2,0,1,6,2,5,0,0,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -139,16 +142,27 @@ def main():
                       f"crop={W}:{H}:(iw-{W})/2:(ih-{H})*{c.get('crop_y', 0.35)},"
                       f"format=yuv420p,setsar=1")
             # 逐段把響度拉到同一基準，不同手機、不同距離錄的人聲才不會忽大忽小
-            lufs = measure_lufs(src, c["in"], dur)
+            # "auto_gain": false 時不自動對齊，只用 gain_db／gain_keys（音量曲線已經算好絕對大小時用）
+            lufs = measure_lufs(src, c["in"], dur) if c.get("auto_gain", True) else None
             # 降噪後的素材可能很小聲，上限放寬到 ±MAX_GAIN；"gain_db" 可逐段微調
             gain = 0.0 if lufs is None or lufs < -70 else max(-MAX_GAIN, min(MAX_GAIN, TARGET_LUFS - lufs))
             gain += c.get("gain_db", 0.0)
             # 人聲做成雙單聲道（左右相同），手機喇叭、單聲道裝置都能正常出聲；浮點運算避免補音量時破音
+            # gain_keys：段落內的音量曲線 [{"t", "db"}, ...]（t 是素材秒數），補償講者離手機忽遠忽近
+            ride = ""
+            if "gain_keys" in c:
+                gk = [{**k, "t": k["t"] - c["in"]} for k in c["gain_keys"]]
+                ride = f"volume='pow(10,({lerp_expr(gk, 'db', 't')})/20)':eval=frame,"
             af = ("aformat=sample_fmts=fltp,pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
-                  f"highpass=f=80,volume={gain:.2f}dB,"
+                  f"highpass=f=80,volume={gain:.2f}dB,{ride}"
                   f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.4f}:d={AFADE}")
             for s, e, text in c.get("subs", []):
                 events.append((t0 + s, t0 + min(e, dur), text, "Default"))
+            # 特效字（搞笑字卡、圖示）：[開始, 結束, 文字]，時間是素材秒數；文字可含 ASS 標籤（位置、動畫）
+            for s, e, text in c.get("fx", []):
+                a, b = max(0.0, s - c["in"]), min(dur, e - c["in"])
+                if b > a:
+                    events.append((t0 + a, t0 + b, text, "Fx"))
             if c.get("no_overlay"):
                 pass  # 片尾等畫面不放標題、Logo
             elif spans and abs(spans[-1][1] - t0) < 1e-6:
@@ -170,10 +184,22 @@ def main():
 
     ass = os.path.join(tmp, "subs.ass")
     build_ass(events, ass, style)
+    if style.get("loudness") == "linear":
+        # 線性響度：先只跑聲音量整支響度，再整體套一個固定增益＋限幅，逐段的大小關係原樣保留
+        # （預設的 loudnorm 是動態的，會把每段各自拉回目標，gain_db 微調會被抵銷）
+        achains = [ch for ch in chains if ":a]" in ch]
+        probe = ";".join(achains) + ";" + "".join(f"[a{i}]" for i in range(len(labels))) + \
+            f"concat=n={len(labels)}:v=0:a=1,ebur128[am]"
+        r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", *inputs, "-filter_complex", probe,
+                            "-map", "[am]", "-f", "null", "-"], capture_output=True, text=True)
+        measured = float([l.split()[1] for l in r.stderr.splitlines() if l.strip().startswith("I:")][-1])
+        afinal = (f"[ac]volume={TARGET_LUFS - measured:.2f}dB,"
+                  "alimiter=limit=0.84:level=false,aresample=48000[ao]")
+    else:
+        afinal = "[ac]loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[ao]"
     graph = ";".join(chains) + ";" + "".join(labels) + \
         f"concat=n={len(labels)}:v=1:a=1[vc][ac];" \
-        f"[vc]subtitles={ass}:fontsdir={args.font}[vs];" \
-        "[ac]loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[ao]"
+        f"[vc]subtitles={ass}:fontsdir={args.font}[vs];" + afinal
     if style.get("logo"):
         # style.logo：Logo 圖檔，放在標題左側，高度 logo_h，只出現在人物畫面
         inputs += ["-loop", "1", "-i", style["logo"]]

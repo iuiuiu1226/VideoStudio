@@ -1,0 +1,22 @@
+{
+  "name": "生活應用 VOL.02 片尾（與學員分享 VOL.01 相同）",
+  "style": {
+    "font": "Noto Sans TC",
+    "size": 78,
+    "outline": 4,
+    "shadow": 1,
+    "margin_v": 660,
+    "title": "BK 測試｜生活應用",
+    "note": "第七感人生智慧學",
+    "loudness": "linear"
+  },
+  "clips": [
+    {
+      "id": "#endcard",
+      "src": "output/endcard.mp4",
+      "in": 0.0,
+      "out": 7.0,
+      "no_overlay": true
+    }
+  ]
+}

@@ -34,5 +34,14 @@
     "eq": "equalizer=f=3500:t=q:w=1.0:g=3,equalizer=f=250:t=q:w=1.0:g=-2",
     "gate_below_db": 18,
     "gate_range_db": 6
+  },
+  "IMG_6539.MOV": {
+    "strength": 0.7,
+    "nstd": 2.0,
+    "highpass": 100,
+    "eq": "equalizer=f=3500:t=q:w=1.0:g=3,equalizer=f=250:t=q:w=1.0:g=-2",
+    "gate_threshold": 0.009,
+    "gate_ratio": 3,
+    "gate_range_db": 8
   }
 }
