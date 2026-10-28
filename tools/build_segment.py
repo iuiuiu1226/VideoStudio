@@ -30,6 +30,27 @@ def run(cmd):
     subprocess.run(cmd, check=True)
 
 
+# iPhone 預設拍 HDR（HLG／PQ、BT.2020）。直接當一般影片處理會偏亮、偏淡，要先轉成一般畫面（SDR、BT.709）。
+# mobius 色調映射＋HDR_NPL 的亮度基準，最接近手機上看原片的樣子
+HDR_NPL = 600
+HDR_TRC = ("arib-std-b67", "smpte2084")
+
+
+def tonemap_chain(trc="arib-std-b67", npl=HDR_NPL):
+    # zoompan 輸出的畫面不帶色彩標記，先用 setparams 補回 HDR 的標記，zscale 才知道要從哪裡轉
+    return (f"setparams=color_primaries=bt2020:color_trc={trc}:colorspace=bt2020nc:range=tv,"
+            f"zscale=t=linear:npl={npl},format=gbrpf32le,"
+            "zscale=p=bt709,tonemap=tonemap=mobius:desat=0,zscale=t=bt709:m=bt709:r=tv,")
+
+
+def is_hdr(src):
+    """HDR 素材回傳它的轉換曲線名稱（給 tonemap_chain），一般素材回傳空字串。"""
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                        "stream=color_transfer", "-of", "default=nw=1:nk=1", src], capture_output=True, text=True)
+    trc = r.stdout.strip().splitlines()[0].strip(",") if r.stdout.strip() else ""
+    return trc if trc in HDR_TRC else ""
+
+
 def measure_lufs(src, start, dur):
     """量測素材某段的整合響度（LUFS），用來逐段對齊音量。"""
     r = subprocess.run(["ffmpeg", "-hide_banner", "-ss", f"{start}", "-t", f"{dur}", "-i", src,
@@ -141,6 +162,9 @@ def main():
                 vf = (f"scale={int(W * z) // 2 * 2}:{int(H * z) // 2 * 2},"
                       f"crop={W}:{H}:(iw-{W})/2:(ih-{H})*{c.get('crop_y', 0.35)},"
                       f"format=yuv420p,setsar=1")
+            trc = is_hdr(src)
+            if trc:
+                vf = vf.replace("format=yuv420p,setsar=1", tonemap_chain(trc) + "format=yuv420p,setsar=1")
             # 逐段把響度拉到同一基準，不同手機、不同距離錄的人聲才不會忽大忽小
             # "auto_gain": false 時不自動對齊，只用 gain_db／gain_keys（音量曲線已經算好絕對大小時用）
             lufs = measure_lufs(src, c["in"], dur) if c.get("auto_gain", True) else None
@@ -214,6 +238,7 @@ def main():
     run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", graph,
          "-map", "[vo]", "-map", "[ao]",
          "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
+         "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
          "-r", str(FPS), "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
          "-movflags", "+faststart", args.out])
     print(f"{args.out}  {t0:.2f}s")

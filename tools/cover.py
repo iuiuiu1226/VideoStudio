@@ -16,6 +16,8 @@ import subprocess
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+from build_segment import is_hdr, tonemap_chain
+
 W, H = 1080, 1920
 GOLD = (217, 180, 90)
 NAVY = (13, 16, 24)
@@ -24,6 +26,9 @@ MAX_TEXT_W = 960
 
 def grab(src, t, frame):
     vf = f"crop={frame['w']}:{frame['h']}:{frame['x']}:{frame['y']},scale={W}:{H}:flags=lanczos"
+    trc = is_hdr(src)
+    if trc:
+        vf += "," + tonemap_chain(trc).rstrip(",")  # HDR 素材先轉成一般畫面，顏色才不會偏亮偏淡
     raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", src, "-frames:v", "1",
                           "-vf", vf, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
                          capture_output=True, check=True).stdout
