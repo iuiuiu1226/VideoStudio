@@ -1,0 +1,29 @@
+{
+  "src": "IMG_6539.MOV",
+  "t": 105.4,
+  "frame": {
+    "x": 463.4,
+    "y": 732.6,
+    "w": 1350.0,
+    "h": 2400.0
+  },
+  "series": "BK 測試｜生活應用",
+  "sub": "前世今生也測得出來",
+  "logo": "assets/logo.png",
+  "quote_top": 990,
+  "lines": [
+    {
+      "text": "你家的寵物",
+      "size": 86,
+      "color": "white",
+      "weight": 800,
+      "gap": 30
+    },
+    {
+      "text": "上輩子是你老婆？",
+      "size": 118,
+      "color": "gold",
+      "weight": 900
+    }
+  ]
+}

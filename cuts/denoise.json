@@ -5,9 +5,11 @@
     "gate_range_db": 22
   },
   "IMG_0632.MOV": {
-    "strength": 0.85,
-    "gate_below_db": 16,
-    "gate_range_db": 12
+    "strength": 0.9,
+    "nonstat": 2.0,
+    "highpass": 90,
+    "gate_below_db": 18,
+    "gate_range_db": 24
   },
   "1740215111.mp4": {
     "strength": 0.85,
