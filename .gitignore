@@ -1,3 +1,4 @@
 output/
 assets/fonts/
 assets/models/
+__pycache__/
