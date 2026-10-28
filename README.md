@@ -52,10 +52,10 @@
 
 ## 短影音配音＋配樂流程（Gemini TTS＋Lyria）
 
-稿子 → 配音 → 逐句檢查 → 配樂（已有就沿用）→ 合成 mp4，一行指令：
+稿子 → 配音 → 逐句檢查 → 配樂（已有就沿用）→ 合成 mp4，一行指令（新環境先跑一次 `sh tools/setup.sh`）：
 
 ```sh
-tools/make_short.sh scripts/narration/test_3lines.txt scripts/narration/music_prompt_curious_warm.txt test3 <字型資料夾>
+tools/make_short.sh scripts/narration/test_3lines.txt scripts/narration/music_prompt_curious_warm.txt test3
 ```
 
 **金鑰**：到 aistudio.google.com 建 API 金鑰，放在環境變數 `GEMINI_API_KEY`
