@@ -22,7 +22,7 @@
 
 | 版本 | 長度 | 剪輯清單 |
 |---|---|---|
-| v2（無配樂） | 91.5 秒 | `cuts/life01/seg1_hook.json` … `cuts/life01/seg5_end.json` 依序接起來 |
+| v3（無配樂，HDR 色調修正） | 91.5 秒 | `cuts/life01/seg1_hook.json` … `cuts/life01/seg5_end.json` 依序接起來 |
 
 段落：鉤子（直播賣的精品是真的嗎→很多是假的、為什麼要用身體測）→ 她怎麼學會的 →
 學長姐舉手、「一堂課程可以讓那麼多人願意複訓」→ 片尾（與學員分享 VOL.01 相同）。
@@ -40,7 +40,7 @@
 
 | 版本 | 長度 | 剪輯清單 |
 |---|---|---|
-| v2（無配樂） | 49 秒 | `cuts/life02/seg1_joke.json`、`cuts/life02/seg2_test.json`、`cuts/life02/seg3_end.json` |
+| v3（無配樂） | 49 秒 | `cuts/life02/seg1_joke.json`、`cuts/life02/seg2_test.json`、`cuts/life02/seg3_end.json` |
 
 段落：前世今生、身邊的緣分 → 姊妹父母朋友，台下喊「寵物！」→「上輩子他是我的老婆或老公，這次有可能我當他的⋯」台下又喊「寵物！」（全場笑）→
 都可以用能量測試測出來、也能測過去 → 學到這個技能可以回去自己測 → 片尾。逐字稿在 `scripts/逐字稿_IMG_6539_raw.txt`。
