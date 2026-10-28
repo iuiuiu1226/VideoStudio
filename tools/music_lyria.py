@@ -38,6 +38,7 @@ def check_vocals(path, max_voice=0.0, model=None):
     語音偵測（VAD）在有音樂時幾乎聽不到人聲，一次聽 30 秒又容易被音樂帶去幻聽，
     所以改成每 8 秒一段逐段聽：「沒有人聲」機率低於 0.5、又不是常見幻聽字串，就算有人聲。
     （實測：純音樂這個機率都在 0.54 以上；混進與音樂一樣大或小 6 dB 的講話時降到 0.10–0.49）
+    幻聽另一個特徵是第一個字的可信度極低（0.02–0.15），這種段落直接略過。
     中文、英文各聽一次（浮水印常是英文）。可疑片段總長超過 max_voice 秒就淘汰。
     """
     from faster_whisper import WhisperModel
@@ -48,7 +49,9 @@ def check_vocals(path, max_voice=0.0, model=None):
         for st in np.arange(0, max(len(audio) / 16000 - WIN / 2, 0.1), HOP):
             x = audio[int(st * 16000):int((st + WIN) * 16000)]
             segs = list(model.transcribe(x, language=lang, vad_filter=False, beam_size=5,
-                                         condition_on_previous_text=False, without_timestamps=True)[0])
+                                         condition_on_previous_text=False, word_timestamps=True)[0])
+            # 幻聽的特徵：第一個字可信度極低（< 0.2），後面整句是背出來的常見字幕（「Thanks for watching」「by bwd6」）
+            segs = [s for s in segs if s.words and s.words[0].probability >= 0.2]
             text = "".join(s.text for s in segs).strip()
             ns = min((s.no_speech_prob for s in segs), default=1.0)
             if len(re.sub(r"\W", "", text)) >= 2 and ns < 0.5 and not HALLUCINATION.search(text):
