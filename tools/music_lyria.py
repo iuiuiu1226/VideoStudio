@@ -22,7 +22,8 @@ import numpy as np
 MODEL = "lyria-3.5"
 # whisper 在純音樂上常幻聽出這類字幕文字，不算人聲
 HALLUCINATION = re.compile(r"字幕|Amara|訂閱|订阅|感謝觀看|感谢观看|謝謝觀看|MING PAO|"
-                           r"thank(s)? (you )?for watching|subscribe|^\W*(thank you|thanks|you|bye)\W*$", re.I)
+                           r"thank(s)? (you )?for watching|subscribe|^\W*(thank you|thanks|you|bye)\W*$|"
+                           r"优优独播|優優獨播|YoYo Television|right back", re.I)
 WIN, HOP = 8.0, 4.0  # 每 8 秒聽一段、每 4 秒往前滑
 
 
