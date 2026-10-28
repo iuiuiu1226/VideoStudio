@@ -50,6 +50,38 @@
   整支用線性響度（`style.loudness = "linear"`），笑聲比講話略大
 - 降噪的噪音門改用絕對門檻（`gate_threshold`），以免把她較小聲的句子當成背景壓掉
 
+## 短影音配音＋配樂流程（Gemini TTS＋Lyria）
+
+稿子 → 配音 → 逐句檢查 → 配樂（已有就沿用）→ 合成 mp4，一行指令：
+
+```sh
+tools/make_short.sh scripts/narration/test_3lines.txt scripts/narration/music_prompt_curious_warm.txt test3 <字型資料夾>
+```
+
+**金鑰**：到 aistudio.google.com 建 API 金鑰，放在環境變數 `GEMINI_API_KEY`
+（雲端環境：環境設定 → Network secrets／環境變數；自己的電腦：專案根目錄 `.env`，照 `.env.example`）。
+不要寫進程式、不要上傳 git（`.env` 已在 `.gitignore`）。帳戶是預付制，要先在 AI Studio → Billing → Buy credits 儲值，
+餘額 0 會回 HTTP 402。費用：80 秒旁白約台幣 1 元內；配樂一首約 0.08 美元。
+
+| 步驟 | 工具 | 說明 |
+|---|---|---|
+| 配音 | `tools/voice_gemini.py` | Gemini TTS（`gemini-3.8-flash-tts`，預設男聲 Charon）。一行一句、一句一個 wav，唸錯用 `--only N` 只重配那句。風格說明寫在 `STYLE`：台灣口音、語速、語氣、只唸稿上的字 |
+| 檢查 | `tools/check_voice.py` | 本機 faster-whisper 逐句辨識、跟稿子逐字比對（簡轉繁、去標點），列出唸錯／多字／漏字；逐字時間寫回 `lines.json` 給字幕對齊 |
+| 配樂 | `tools/music_lyria.py` | Lyria（`lyria-3.5`，同一把金鑰）。英文描述寫風格、BPM、樂器、情緒走向，結尾 `Instrumental only, no vocals`。生成後自動檢查人聲，有就加 `_rejected` 淘汰；`--check 檔案` 可檢查任何音樂 |
+| 合成 | `tools/narrate.py` | 每句剪頭尾空白、句間停頓 0.35 秒；字幕遇標點或 `|` 斷行；配樂循環、淡入淡出、比旁白低 18 dB；整支 -14 LUFS（兩段式 loudnorm）＋ alimiter 限幅 |
+
+- 稿子格式：一行一句，`#` 開頭是註解；長句用 `|` 標字幕斷行（配音時會拿掉），斷在詞與詞之間
+- 配樂人聲檢查：每 8 秒一段用 whisper 中英文各聽一次，「沒有人聲」機率低於 0.5 且不是常見幻聽字串
+  （「感謝觀看」「字幕」「MING PAO」…）就算有人聲。實測純音樂全部通過，混進講話（與音樂一樣大）會被抓到
+- 通過的配樂放 `assets/music/`，可以重複用在很多支影片；描述與檢查結果存在同名 `.json`
+
+**授權注意（商用）**
+
+- 不要用 F5-TTS 官方權重、Meta MusicGen 權重：授權是 CC-BY-NC，禁止商用
+- 免費替代：微軟 Azure 語音免費層（F0，每月 50 萬字，台灣男聲 `zh-TW-YunJheNeural`）；
+  本機開源可商用：BreezyVoice（聯發科，台灣口音）、Fun-CosyVoice3（Apache-2.0）
+- 複製真人聲音要有本人書面同意；IG、YouTube 對逼真的 AI 聲音或影片有標示規定，上片時依平台規定勾選
+
 ### 在自己的電腦上使用（本地版 Claude Code）
 
 給在筆電上執行的 Claude：請照下列步驟準備環境（macOS 為例，Windows 用 winget / pip 對應安裝）。

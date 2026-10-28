@@ -2,3 +2,6 @@ output/
 assets/fonts/
 assets/models/
 __pycache__/
+.env
+work/
+assets/music/*_rejected*
