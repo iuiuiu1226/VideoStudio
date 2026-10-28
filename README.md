@@ -42,6 +42,7 @@
 | 版本 | 長度 | 剪輯清單 |
 |---|---|---|
 | v3（無配樂） | 49 秒 | `cuts/life02/seg1_joke.json`、`cuts/life02/seg2_test.json`、`cuts/life02/seg3_end.json` |
+| 配樂版 v4 | 49 秒 | v3 加配樂 C「抖音節拍」`assets/music/tiktok_beat.mp3`（從 40 秒開始，避開 30–40 秒的休息段；`level_music.py` 拉平），`mix_bgm.py --rel -17 --no-duck --lufs -14` |
 
 段落：前世今生、身邊的緣分 → 姊妹父母朋友，台下喊「寵物！」→「上輩子他是我的老婆或老公，這次有可能我當他的⋯」台下又喊「寵物！」（全場笑）→
 都可以用能量測試測出來、也能測過去 → 學到這個技能可以回去自己測 → 片尾。逐字稿在 `scripts/逐字稿_IMG_6539_raw.txt`。

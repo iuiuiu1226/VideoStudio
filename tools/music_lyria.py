@@ -85,6 +85,7 @@ def main():
     ap.add_argument("--model", default=MODEL)
     ap.add_argument("--max-voice", type=float, default=0.0, help="可疑人聲超過幾秒就淘汰（預設有就淘汰）")
     ap.add_argument("--check", help="只檢查這個現有音檔有沒有人聲")
+    ap.add_argument("--skip-check", action="store_true", help="先生成、不檢查（檔名加 _unchecked，之後用 --check 檢查）")
     args = ap.parse_args()
 
     if args.check:
@@ -102,6 +103,13 @@ def main():
         data, mime = find_audio(post({"model": args.model, "input": args.prompt}))
     except ApiError as e:
         raise SystemExit(f"配樂生成失敗：{e}")
+    if args.skip_check:
+        path = save_audio(os.path.join(args.out, args.name + "_unchecked"), data)
+        with open(os.path.splitext(path)[0] + ".json", "w", encoding="utf-8") as f:
+            json.dump({"model": args.model, "prompt": args.prompt, "mime": mime, "vocals_ok": None},
+                      f, ensure_ascii=False, indent=2)
+        print(f"{path}  {len(decode16k(path)) / 16000:.1f} 秒  尚未檢查人聲")
+        return
     path = save_audio(os.path.join(args.out, args.name), data)
     ok, hits = check_vocals(path, args.max_voice)
     info = {"model": args.model, "prompt": args.prompt, "mime": mime, "vocals_ok": ok, "suspect": hits}

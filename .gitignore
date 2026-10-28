@@ -5,3 +5,4 @@ __pycache__/
 .env
 work/
 assets/music/*_rejected*
+assets/music/*_unchecked*
