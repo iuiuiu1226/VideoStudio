@@ -1,0 +1,31 @@
+{
+  "src": "IMG_6552.MOV",
+  "t": 23.4,
+  "frame": {
+    "x": 725.5,
+    "y": 712.9,
+    "w": 1434.5,
+    "h": 2550.2
+  },
+  "series": "BK 測試｜課堂精華",
+  "sub": "從水結晶實驗看能量",
+  "logo": "assets/logo.png",
+  "quote_top": 990,
+  "lines": [
+    {
+      "text": "你每天給出的",
+      "size": 86,
+      "color": "white",
+      "weight": 800,
+      "gap": 30
+    },
+    {
+      "text": "是善念還是惡念？",
+      "size": 118,
+      "color": "gold",
+      "weight": 900
+    }
+  ],
+  "prefilter": "atadenoise=s=9:0a=0.04:0b=0.08:1a=0.04:1b=0.08:2a=0.04:2b=0.08",
+  "grade": "curves=master='0/0 0.25/0.33 0.5/0.62 0.75/0.85 1/1',eq=saturation=1.05,unsharp=5:5:0.8:5:5:0"
+}
