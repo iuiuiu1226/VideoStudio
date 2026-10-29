@@ -591,7 +591,8 @@
           "h": 2108.3
         }
       ],
-      "tail": 0.0
+      "tail": 0.0,
+      "overlay": "work/life03_anim/overlay1.mov"
     },
     {
       "id": "#2 說好話 做好事 存善心",
@@ -943,7 +944,8 @@
         }
       ],
       "lead": 0.0,
-      "tail": 0.0
+      "tail": 0.0,
+      "overlay": "work/life03_anim/overlay2.mov"
     }
   ]
 }

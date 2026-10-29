@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""課堂精華 VOL.01（水結晶）開頭／結尾的自製段落：AI 旁白（Gemini TTS）＋動畫。
+"""課堂精華 VOL.01（水結晶）的自製段落：AI 旁白（Gemini TTS）＋動畫，以及講師段落上的穿插動畫。
 
-開頭（旁白第 1–4 句）：書封《來自水的信息》→「謝謝」的漂亮結晶（金色六角形描邊）→「煩死了」的破碎結晶（六角形碎裂）
-結尾（旁白第 5–8 句）：文字／聲音／念頭三個圖示＋能量波紋 → 人形注水六到七成 → 地球七成是水 → 善念 vs 惡念
-結晶照片取自講師投影片（素材 IMG_6552 的 19–22 秒鏡頭帶過投影片的畫面）。
+開頭（旁白稿 scripts/narration/life03_water_v2.txt 第 1–2 句）：只拋問題，答案留給講師
+  書封《來自水的信息》浮上 →「水結晶實驗」金色六角形畫出 →「水結晶 × 能量」＋問號
+講師段落穿插（透明疊加層，build_segment.py 的 overlay）：
+  「好的力量…六角形」→「謝謝」的漂亮結晶＋金色六角形描邊；「不好的力量…打散」→「煩死了」的破碎結晶＋六角形碎裂；
+  「正能量」→ 金色大字；「說好話、做好事、存善心」→ 三個金色標籤
+結尾（第 3–6 句）：文字／聲音／念頭圖示＋能量波紋 → 人形注水六到七成 → 地球七成是水 → 善念 vs 惡念（最後多停一下）
+結晶照片、書封取自講師投影片（素材 IMG_6552 的 19–22 秒鏡頭帶過投影片的畫面）。
 
-輸出 --out 資料夾：intro.mp4、outro.mp4（1080x1920、30 fps，含旁白）與 subs.json（兩段各自的字幕，秒數從 0 起算），
-再用 build_segment.py 當一般片段接進成片（加系列標題、字幕、響度對齊）。
+輸出 --out 資料夾：intro.mp4、outro.mp4（含旁白）、overlay1.mov、overlay2.mov（透明疊加層）
+與 subs.json（開頭、結尾各自的字幕，秒數從 0 起算），再用 build_segment.py 接成成片。
 
 用法：
-  python3 tools/life03_anim.py --src <素材資料夾> --vo work/life03_vo --font <NotoSansTC.ttf> --out work/life03_anim
+  python3 tools/life03_anim.py --src <素材資料夾> --vo work/life03_vo2 --font <NotoSansTC.ttf> --out work/life03_anim
 """
 import argparse
 import json
@@ -34,16 +38,14 @@ BLUE = (88, 168, 232)
 GRAY = (150, 150, 160)
 SRC_NAME = "IMG_6552.MOV"
 
-# 每句旁白的字幕分段（顯示用文字；配音稿第 1 句的「姜」是讀音寫法，字幕寫「江」）
+# 每句旁白的字幕分段（顯示用文字；配音稿的「姜本勝」「姜本聖」是讀音寫法，字幕寫「江本勝」）
 CHUNKS = {
-    1: ["1999 年 日本學者江本勝", "出版了《來自水的信息》"],
-    2: ["他的實驗觀察到"],
-    3: ["給水看「謝謝」", "這類美好的字句", "水會結成漂亮的六角形"],
-    4: ["給水看「煩死了」", "這類負面的話", "結晶就變得離散、破碎"],
-    5: ["江本勝認為", "文字、聲音、念頭", "都帶著訊息的能量"],
-    6: ["人體約有六到七成是水"],
-    7: ["地球表面約七成被水覆蓋"],
-    8: ["我們每天給出的", "是善念 還是惡念？"],
+    1: ["這本《來自水的信息》", "的作者江本勝", "做過一個很有名的", "「水結晶實驗」"],
+    2: ["到底是什麼實驗？", "水結晶，又跟能量", "有什麼關係呢？"],
+    3: ["江本勝認為", "文字、聲音、念頭", "都帶著訊息的能量"],
+    4: ["人體約有六到七成是水"],
+    5: ["地球表面約七成被水覆蓋"],
+    6: ["我們每天給出的", "是善念 還是惡念呢？"],
 }
 PUNCT = re.compile(r"[\s，。、「」《》？！,.?!|]")
 
@@ -239,7 +241,7 @@ def sparkle(base, cx, cy, t, n=10, rad=330, color=GOLD):
 
 # ---------- 段落 ----------
 
-def build_timeline(vo, lines):
+def build_timeline(vo, lines, tail=TAIL):
     audio, subs, marks, t = [], [], {}, HEAD
     for n in lines:
         y, s, chars, dur = load_vo(vo, n)
@@ -247,7 +249,7 @@ def build_timeline(vo, lines):
         audio.append((t, y))
         subs += [[t + a, t + b, txt] for a, b, txt in s]
         t += dur + GAP
-    total = t - GAP + TAIL
+    total = t - GAP + tail
     mix = np.zeros(int(total * 48000) + 48000, np.float32)
     for t0, y in audio:
         i = int(t0 * 48000)
@@ -264,11 +266,20 @@ def word_t(marks, n, k):
 PREVIEW = []  # --preview 秒數：只輸出這幾格的圖檔檢查版面，不輸出影片
 
 
-def render(path, frames_fn, total, audio):
+def render(path, frames_fn, total, audio=None):
+    """audio=None 時輸出透明疊加層（qtrle，含 alpha），否則輸出含旁白的 mp4"""
     if PREVIEW:
         for s in PREVIEW:
             if s <= total:
                 frames_fn(s).convert("RGB").save(f"{os.path.splitext(path)[0]}_{s:05.2f}.jpg", quality=88)
+        return
+    if audio is None:
+        p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{W}x{H}",
+                              "-r", str(FPS), "-i", "-", "-c:v", "qtrle", "-pix_fmt", "argb", path], stdin=subprocess.PIPE)
+        for i in range(int(round(total * FPS))):
+            p.stdin.write(frames_fn(i / FPS).tobytes())
+        p.stdin.close()
+        p.wait()
         return
     with tempfile.TemporaryDirectory() as td:
         wav = os.path.join(td, "a.f32")
@@ -285,64 +296,101 @@ def render(path, frames_fn, total, audio):
 
 
 def intro(args, F, out):
+    """開頭：只拋問題（這本書的作者做過水結晶實驗——到底是什麼實驗？跟能量有什麼關係？），答案留給講師"""
     src = os.path.join(args.src, SRC_NAME)
     cover = grab(src, 19.7, (520, 470, 1400, 1940))       # 書封《來自水的信息》
-    good = grab(src, 20.7, (10, 1350, 680, 680))           # 「謝謝！」的結晶（正方形，裁成圓形）
-    bad = grab(src, 22.2, (1016, 1447, 780, 780))          # 「煩死了！殺了你！」的結晶
-    audio, subs, M, total = build_timeline(args.vo, [1, 2, 3, 4])
+    audio, subs, M, total = build_timeline(args.vo, [1, 2])
     t1, d1, _ = M[1]
     t2, d2, _ = M[2]
-    t3, d3, _ = M[3]
-    t4, d4, _ = M[4]
-    thanks = word_t(M, 3, 3)       # 「謝謝」
-    hexa = word_t(M, 3, 16)        # 「漂亮的六角形」
-    annoy = word_t(M, 4, 3)        # 「煩死了」
-    crash = word_t(M, 4, 17)       # 「離散」
-    CY = 800                       # 主視覺中心（上方留給系列標題，下方字幕約在 1200–1260）
+    w_exp = word_t(M, 1, 22)       # 「水結晶實驗」（第 22 個字起，不含標點）
+    w_what = word_t(M, 2, 0)       # 「到底是什麼實驗？」
+    w_energy = word_t(M, 2, 7)     # 「水結晶，又跟能量」
+    CY = 800
 
     def frame(t):
         base = vignette_bg(t).convert("RGBA")
-        d = ImageDraw.Draw(base)
-        if t < t2 + 0.2:
-            # 1999 年＋書封：書封從下方浮上、緩慢推近
-            k = ease((t - 0.05) / 0.7)
-            sc = 0.94 + 0.06 * min(t / (t2 + 0.2), 1.0)
-            fade = 1.0 - ease((t - (t2 - 0.25)) / 0.45)
-            paste_card(base, cover, W / 2, CY + 80 + 80 * (1 - k), 520, scale=sc, alpha=k * fade)
-            k2 = pop((t - 0.15) / 0.45)
-            if t > 0.15 and k2 > 0.01:
-                layer_text(base, (W / 2, 420), "1999", F(max(8, int(150 * k2)), 900), GOLD, alpha=fade, stroke=4)
-        if t2 - 0.2 <= t < t3:
-            # 「他的實驗觀察到」：金色六角形畫出來，像顯微鏡下的結晶
-            k = ease((t - (t2 - 0.2)) / (d2 + 0.2))
-            draw_hex_progress(base, W / 2, CY, 250, k)
-        if t3 - 0.1 <= t < t4:
-            k = ease((t - (t3 - 0.1)) / 0.5)
-            sc = 1.0 + 0.05 * (t - t3) / d3
-            fade = 1.0 - ease((t - (t4 - 0.35)) / 0.35)
-            paste_card(base, good, W / 2, CY, 540, scale=sc * (0.9 + 0.1 * k), alpha=k * fade, radius=270)
-            if t >= hexa - 0.4:
-                draw_hex_progress(base, W / 2, CY, 330, ease((t - (hexa - 0.4)) / 0.9), width=9)
-                sparkle(base, W / 2, CY, t, rad=360)
-            if t >= thanks - 0.05:
-                pill(base, W / 2, CY - 390, "謝謝", F(64, 800), NAVY, GOLD, scale=pop((t - thanks) / 0.4), alpha=fade)
-        if t >= t4 - 0.1:
-            k = ease((t - (t4 - 0.1)) / 0.5)
-            shake = 8 * math.sin(t * 70) * max(0.0, 1 - (t - crash) / 0.5) if t >= crash else 0
-            paste_card(base, bad, W / 2 + shake, CY, 540, scale=0.9 + 0.1 * k, alpha=k, radius=270)
-            if t < crash:
-                draw_hex_progress(base, W / 2, CY, 330, 1.0, color=(200, 200, 210), width=9, glow=False)
-            else:
-                draw_hex_shatter(base, W / 2, CY, 330, min((t - crash) / 1.1, 1.0))
-            if t >= annoy - 0.05:
-                pill(base, W / 2, CY - 390, "煩死了", F(64, 800), WHITE, (90, 92, 104), scale=pop((t - annoy) / 0.4))
-        # 結尾淡出，接講師畫面
+        # 書封：浮上、緩慢推近；講到「水結晶實驗」時縮進六角形中心消失（像變成結晶）
+        k = ease((t - 0.05) / 0.7)
+        out_k = ease((t - (w_exp - 0.3)) / 0.6)
+        sc = (0.94 + 0.06 * min(t / max(w_exp, 0.1), 1.0)) * (1 - 0.7 * out_k)
+        cy = CY + 60 + 80 * (1 - k)
+        paste_card(base, cover, W / 2, cy, 560, scale=sc, alpha=k * (1 - out_k))
+        if t >= w_exp - 0.2:
+            # 「水結晶實驗」：金色六角形畫出來，標籤跳出
+            hk = ease((t - (w_exp - 0.2)) / 0.9)
+            rot = 12 * max(0.0, t - w_energy) if t >= w_energy else 0.0
+            draw_hex_progress(base, W / 2, CY + 60, 280, hk, rot=rot)
+            if t < w_what - 0.05:
+                pill(base, W / 2, CY + 60, "水結晶實驗", F(60, 800), NAVY, GOLD, scale=pop((t - w_exp) / 0.45))
+        if t >= w_what - 0.05:
+            # 「到底是什麼實驗？」：六角形中間跳出大問號
+            q = pop((t - w_what + 0.05) / 0.45)
+            if q > 0.01:
+                layer_text(base, (W / 2, CY + 60), "？", F(max(8, int(260 * q)), 900), GOLD, stroke=6)
+        if t >= w_energy - 0.05:
+            # 「水結晶，又跟能量有什麼關係呢？」
+            e = pop((t - w_energy + 0.05) / 0.45)
+            if e > 0.01:
+                layer_text(base, (W / 2, CY - 330), "水結晶 × 能量", F(max(8, int(92 * e)), 900), WHITE, stroke=4)
+            sparkle(base, W / 2, CY + 60, t, rad=330)
+        # 結尾淡到黑，接講師畫面
         if t > total - 0.3:
             base = Image.blend(base.convert("RGB"), canvas((0, 0, 0)), ease((t - (total - 0.3)) / 0.3)).convert("RGBA")
         return base
 
     render(os.path.join(out, "intro.mp4"), frame, total, audio)
     return subs, total
+
+
+def overlays(args, F, out):
+    """講師段落上的穿插動畫（透明疊加層），時間用素材秒數；片段 1 是素材 0–19.05 秒，片段 2 是 22.14–33.25 秒"""
+    src = os.path.join(args.src, SRC_NAME)
+    good = grab(src, 20.7, (10, 1350, 680, 680))
+    bad = grab(src, 22.2, (1016, 1447, 780, 780))
+    Y = 990            # 放在臉的下方（臉約在 y 530–740），不會擋到臉，也在字幕（約 1180 起）上方
+    R = 300            # 結晶圓圖直徑
+
+    def crystal(base, img, s, a, b, x, hexa=None, shatter=None, label=None, lab_fg=NAVY, lab_bg=GOLD):
+        if not (a - 0.05 <= s <= b + 0.35):
+            return
+        k = ease((s - a) / 0.35) * (1.0 - ease((s - b) / 0.35))
+        paste_card(base, img, x, Y, R, scale=0.85 + 0.15 * k, alpha=k, radius=R / 2)
+        if hexa is not None and s >= hexa:
+            draw_hex_progress(base, x, Y, R * 0.62, ease((s - hexa) / 0.8) * (1 if s < b else k), width=7)
+            if s >= hexa + 0.6:
+                sparkle(base, x, Y, s, n=8, rad=R * 0.66)
+        if shatter is not None:
+            if s < shatter:
+                draw_hex_progress(base, x, Y, R * 0.62, k, color=(210, 210, 220), width=7, glow=False)
+            else:
+                draw_hex_shatter(base, x, Y, R * 0.62, min((s - shatter) / 1.0, 1.0), width=7)
+        if label:
+            pill(base, x, Y - R / 2 - 30, label, F(44, 800), lab_fg, lab_bg, scale=pop((s - a) / 0.4), alpha=k)
+
+    def frame1(t):
+        s = t                                   # 片段 1 從素材 0 秒開始
+        base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        crystal(base, good, s, 3.30, 6.70, 290, hexa=4.86, label="謝謝")
+        crystal(base, bad, s, 6.95, 9.90, 290, shatter=8.86, label="煩死了", lab_fg=WHITE, lab_bg=(90, 92, 104))
+        if s >= 18.15:
+            e = pop((s - 18.15) / 0.4)
+            if e > 0.01:
+                layer_text(base, (300, Y), "正能量", F(max(8, int(120 * e)), 900), GOLD, stroke=6)
+        return base
+
+    def frame2(t):
+        s = t + 22.14                           # 片段 2 從素材 22.14 秒開始
+        base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        end = 29.9
+        if 25.9 <= s <= end + 0.4:
+            fade = 1.0 - ease((s - end) / 0.4)
+            for i, (txt, ts) in enumerate((("說好話", 26.02), ("做好事", 27.60), ("存善心", 28.28))):
+                if s >= ts - 0.05:
+                    pill(base, 860, 830 + i * 120, txt, F(54, 800), NAVY, GOLD, scale=pop((s - ts + 0.05) / 0.4), alpha=fade)
+        return base
+
+    render(os.path.join(out, "overlay1.mov"), frame1, 19.05)
+    render(os.path.join(out, "overlay2.mov"), frame2, 33.25 - 22.14)
 
 
 def person_shape(d, cx, top, s, fill):
@@ -356,14 +404,14 @@ def outro(args, F, out):
     cover = grab(src, 19.7, (520, 470, 1400, 1940))
     good = grab(src, 20.7, (10, 1350, 680, 680))
     bad = grab(src, 22.2, (1016, 1447, 780, 780))
-    audio, subs, M, total = build_timeline(args.vo, [5, 6, 7, 8])
-    t5, d5, _ = M[5]
-    t6, d6, _ = M[6]
-    t7, d7, _ = M[7]
-    t8, d8, _ = M[8]
-    w_word, w_sound, w_mind = word_t(M, 5, 5), word_t(M, 5, 7), word_t(M, 5, 9)
-    w_energy = word_t(M, 5, 17)
-    w_good, w_bad = word_t(M, 8, 8), word_t(M, 8, 12)
+    audio, subs, M, total = build_timeline(args.vo, [3, 4, 5, 6], tail=1.4)   # 最後一句講完多停一下，收得溫柔
+    t5, d5, _ = M[3]
+    t6, d6, _ = M[4]
+    t7, d7, _ = M[5]
+    t8, d8, _ = M[6]
+    w_word, w_sound, w_mind = word_t(M, 3, 5), word_t(M, 3, 7), word_t(M, 3, 9)
+    w_energy = word_t(M, 3, 17)
+    w_good, w_bad = word_t(M, 6, 8), word_t(M, 6, 12)
     CY = 760
 
     def icon(base, kind, cx, cy, s, a):
@@ -472,7 +520,7 @@ def main():
     ap.add_argument("--vo", required=True, help="voice_gemini.py 的輸出資料夾")
     ap.add_argument("--font", required=True, help="NotoSansTC 字型檔")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--only", choices=["intro", "outro"])
+    ap.add_argument("--only", choices=["intro", "outro", "overlay"])
     ap.add_argument("--preview", default="", help="只輸出這幾個時間點的畫面，例如 1,5.5,12")
     args = ap.parse_args()
     PREVIEW[:] = [float(x) for x in args.preview.split(",") if x]
@@ -480,10 +528,12 @@ def main():
     F = Fonts(args.font)
     path = os.path.join(args.out, "subs.json")
     res = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else {}
-    if args.only != "outro":
+    if args.only in (None, "intro"):
         s, d = intro(args, F, args.out)
         res["intro"] = {"dur": round(d, 3), "subs": [[round(a, 2), round(b, 2), x] for a, b, x in s]}
-    if args.only != "intro":
+    if args.only in (None, "overlay"):
+        overlays(args, F, args.out)
+    if args.only in (None, "outro"):
         s, d = outro(args, F, args.out)
         res["outro"] = {"dur": round(d, 3), "subs": [[round(a, 2), round(b, 2), x] for a, b, x in s]}
     json.dump(res, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)

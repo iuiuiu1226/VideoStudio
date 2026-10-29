@@ -13,6 +13,7 @@
   fx 是特效字（亮黃粗體、置中對齊，位置與動畫用 ASS 標籤寫在文字裡），時間是素材秒數。
   gain_keys 是段落內的音量曲線（t 為素材秒數、db 為增益）；style.loudness = "linear" 時整支只做固定增益＋限幅。
   問題字卡：{"card": "文字", "dur": 秒數}，深色底置中白字、無聲。
+  overlay 是疊在畫面上的透明動畫檔（例如 qtrle 含 alpha 的 .mov），從該 clip 開頭對齊，疊在字幕底下。
 """
 import argparse
 import json
@@ -193,7 +194,16 @@ def main():
                 spans[-1][1] = t0 + dur
             else:
                 spans.append([t0, t0 + dur])
-        chains.append(f"[{vi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,{vf}[v{i}]")
+        if c.get("overlay"):
+            # 透明動畫疊加層（穿插的圖卡、標籤），對齊這段開頭
+            inputs += ["-i", c["overlay"]]
+            oi = n_in
+            n_in += 1
+            chains.append(f"[{vi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,{vf}[b{i}]")
+            chains.append(f"[{oi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,format=rgba[o{i}]")
+            chains.append(f"[b{i}][o{i}]overlay=0:0:eof_action=pass,format=yuv420p[v{i}]")
+        else:
+            chains.append(f"[{vi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,{vf}[v{i}]")
         chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
                       f"apad,atrim=duration={dur:.4f},asetpts=PTS-STARTPTS,{af}[a{i}]")
         labels.append(f"[v{i}][a{i}]")
