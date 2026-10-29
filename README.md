@@ -88,6 +88,10 @@
   畫面用講師有笑容的 25.0 秒（使用者從 23.4／25.0／29.2 三個笑容畫面選中間的），`cuts/cover_class01.json` →
   `output/BK課堂精華_VOL01_封面.jpg`；其他候選在 `cuts/cover_options/cover_class01_B_*.json`
 
+- 配樂（使用者要「沉穩溫暖」）：三首 Lyria 候選 A 鋼琴弦樂 `class01_piano`、B 木吉他大提琴 `class01_guitar`、
+  C 電鋼琴輕鼓 `class01_rhodes`（描述在 `scripts/narration/music_prompt_class01_*.txt`；前 70 秒人聲檢查都通過），先給 30 秒試聽待使用者選；
+  三首都已先混好備用（`level_music.py` 拉平，`mix_bgm.py --rel -17 --no-duck --lufs -14 --fade-out 2.5`＋讓出中頻），
+  分段逐字稿與無配樂版相同 94–100%
 - 講師段落照原本順序剪，不重排；最後一句「那這關我們什麼事呢」依使用者要求刪掉；19.05–22.14 秒的口誤拿掉
 - 拍攝時鏡頭一直推拉，用臉部追蹤把講師大小固定（臉高佔畫面 11%，`frame_keys`）；18–19 秒講師走到原畫面邊緣
 - 降噪 `cuts/denoise.json` 的 `IMG_6552.MOV`（一般設定，空檔差距 24 → 42 dB，逐字稿不變）
