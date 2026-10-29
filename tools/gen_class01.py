@@ -53,7 +53,7 @@ clips = [
 json.dump({"name": "課堂精華 VOL.01 段落 2｜水結晶與正能量（IMG_6552 原順序，刪最後一句「那這關我們什麼事呢」）",
            "style": STYLE, "clips": clips}, open(os.path.join(OUT, "seg2_water.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 json.dump({"name": "課堂精華 VOL.01 片尾（與學員分享 VOL.01 相同）", "style": STYLE,
-           "clips": [{"id": "#endcard", "src": "output/endcard.mp4", "in": 0.0, "out": 7.0, "no_overlay": True, "xfade": 0.6}]},
+           "clips": [{"id": "#endcard", "src": "output/endcard.mp4", "in": 0.0, "out": 7.0, "no_overlay": True, "xfade": 1.0}]},
           open(os.path.join(OUT, "seg4_end.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 for t in (0, 5, 9, 10, 12, 16, 18.5, 22.5, 26, 29, 32):
     print(t, rect_at(t))

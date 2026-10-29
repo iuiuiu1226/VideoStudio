@@ -16,7 +16,7 @@
       "in": 0.0,
       "out": 7.0,
       "no_overlay": true,
-      "xfade": 0.6
+      "xfade": 1.0
     }
   ]
 }

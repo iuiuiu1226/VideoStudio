@@ -336,8 +336,8 @@ def intro(args, F, out):
         k = ease((t - 0.05) / 0.7)
         out_k = ease((t - (w_exp - 0.3)) / 0.6)
         sc = (0.94 + 0.06 * min(t / max(w_exp, 0.1), 1.0)) * (1 - 0.7 * out_k)
-        cy = CY + 60 + 80 * (1 - k)
-        paste_card(base, cover, W / 2, cy, 560, scale=sc, alpha=k * (1 - out_k))
+        cy = CY - 30 + 80 * (1 - k) + 90 * out_k      # 書封在字幕上方（字幕約 y 1180 起），消失時移到六角形中心
+        paste_card(base, cover, W / 2, cy, 460, scale=sc, alpha=k * (1 - out_k))
         if t >= w_exp - 0.2:
             # 「水結晶實驗」：金色六角形畫出來，標籤跳出
             hk = ease((t - (w_exp - 0.2)) / 0.9)
@@ -350,12 +350,11 @@ def intro(args, F, out):
             q = pop((t - w_what + 0.05) / 0.45)
             if q > 0.01:
                 layer_text(base, (W / 2, CY + 60), "？", F(max(8, int(260 * q)), 900), GOLD, stroke=6)
-        if t >= w_energy - 0.05:
-            # 「水結晶跟能量有什麼關係呢？」
-            e = pop((t - w_energy + 0.05) / 0.45)
+        if t >= w_what - 0.05:
+            # 「到底是什麼實驗？」起，上方標題「水結晶 × 能量」
+            e = pop((t - w_what + 0.05) / 0.45)
             if e > 0.01:
-                layer_text(base, (W / 2, CY - 330), "水結晶跟能量", F(max(8, int(92 * e)), 900), WHITE, stroke=4)
-            sparkle(base, W / 2, CY + 60, t, rad=330)
+                layer_text(base, (W / 2, CY - 330), "水結晶 × 能量", F(max(8, int(92 * e)), 900), WHITE, stroke=4)
         return base   # 接講師畫面的轉場由 build_segment 的 xfade 交叉淡化
 
     render(os.path.join(out, "intro.mp4"), frame, total, audio)
@@ -380,8 +379,6 @@ def overlays(args, F, out):
         if glow is not None and s >= glow:
             glow_ring(base, W / 2, Y, R / 2 + 10, GOLD, k * min(1.0, (s - glow) / 0.5))
         paste_card(base, img, W / 2 + shake, Y, R, scale=0.85 + 0.15 * k, alpha=k, radius=R / 2)
-        if glow is not None and s >= glow + 0.3:
-            sparkle(base, W / 2, Y, s, n=8, rad=R / 2 + 50)
         if label:
             pill(base, W / 2, Y + R / 2 + 52, label, F(46, 800), lab_fg, lab_bg, scale=pop((s - a) / 0.4), alpha=k)
 
@@ -423,7 +420,7 @@ def outro(args, F, out):
     cover = grab(src, 19.7, (520, 470, 1400, 1940))
     good, bad = crystals(args)
     # 第 5 句（地球七成是水）依使用者要求拿掉；最後一句講完多停一下，收得溫柔
-    audio, subs, M, total = build_timeline(args.vo, [3, 4, 6], tail=1.4)
+    audio, subs, M, total = build_timeline(args.vo, [3, 4, 6], tail=2.6)
     t5, d5, _ = M[3]
     t6, d6, _ = M[4]
     t8, d8, _ = M[6]
@@ -508,7 +505,6 @@ def outro(args, F, out):
                     glow_ring(base, cx, chest, 130 * s + 6, GOLD, g)
                     paste_card(base, good, cx, chest, 260 * s, scale=0.7 + 0.3 * pop((t - w_good + 0.1) / 0.45),
                                alpha=g, radius=130 * s, shadow=False)
-                    sparkle(base, cx, chest, t, n=6, rad=150 * s)
                     pill(base, cx, top + 620 * s + 70, "善念", F(56, 800), NAVY, GOLD, scale=pop((t - w_good) / 0.4))
                 if n == 1 and t >= w_bad - 0.1:
                     g = ease((t - (w_bad - 0.1)) / 0.45)
@@ -521,6 +517,10 @@ def outro(args, F, out):
                 pct = int(round(70 * ease((t - t6) / (d6 * 0.8))))
                 layer_text(base, (W / 2 + 300, CY - 40), f"60–{pct}%" if pct > 60 else f"{pct}%",
                            F(80, 900), GOLD, alpha=k * (1 - ease((t - (t8 - 0.6)) / 0.4)), stroke=3)
+        if t > total - 1.4:
+            # 收尾：畫面慢慢暗下來（接片尾的交叉淡化），不要一講完就切走
+            dim = 0.55 * ease((t - (total - 1.4)) / 1.4)
+            base = Image.blend(base.convert("RGB"), canvas(NAVY), dim).convert("RGBA")
         return base
 
     render(os.path.join(out, "outro.mp4"), frame, total, audio)
