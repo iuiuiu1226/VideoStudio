@@ -31,6 +31,9 @@ from build_segment import tonemap_chain
 
 W, H, FPS = 1080, 1920, 30
 TEMPO = 1.12                 # 旁白稍微加快（音高不變）
+LINE_TEMPO = {6: 1.0}        # 最後一句「還是惡念呢？」不加快，尾音自然拉長
+KEEP_TAIL = {6}              # 這幾句不切掉結尾的餘音（尾音自然淡出）
+STRETCH_LAST = {6: 1.6}      # 最後一個字（「呢」）單獨放慢幾倍，尾音像真人一樣拉長
 HEAD, GAP, TAIL = 0.35, 0.28, 0.55
 NAVY = (13, 16, 24)
 GOLD = (217, 180, 90)
@@ -91,11 +94,30 @@ def load_vo(vo, n):
     """讀第 n 句旁白：去掉頭尾空白、加快 TEMPO 倍，回傳 (48k 單聲道 float 陣列, 字幕分段時間)"""
     meta = json.load(open(os.path.join(vo, "lines.json"), encoding="utf-8"))["lines"][n - 1]
     s, e = meta.get("speech_start", 0.0), meta.get("speech_end", meta["duration"])
+    tempo = LINE_TEMPO.get(n, TEMPO)
+    if n in KEEP_TAIL:
+        e = meta["duration"]
+    fade = f",afade=t=out:st={max(0.0, (e - s) / tempo - 0.35):.3f}:d=0.35" if n in KEEP_TAIL else ""
     raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(s), "-t", str(e - s + 0.05),
                           "-i", os.path.join(vo, meta["file"]),
-                          "-af", f"rubberband=tempo={TEMPO}:pitch=1:pitchq=quality", "-ac", "1", "-ar", "48000",
+                          "-af", f"rubberband=tempo={tempo}:pitch=1:pitchq=quality{fade}", "-ac", "1", "-ar", "48000",
                           "-f", "f32le", "-"], capture_output=True, check=True).stdout
     y = np.frombuffer(raw, np.float32).copy()
+    if n in STRETCH_LAST:
+        # 最後一個字從它開始的地方切開，只把這一小段放慢（音高不變），接回去時交叉淡化 20ms
+        last = (meta["words"][-1][0] - s) / tempo
+        i = int(last * 48000)
+        with tempfile.TemporaryDirectory() as td:
+            np.ascontiguousarray(y[i:]).tofile(td + "/t.f32")
+            raw2 = subprocess.run(["ffmpeg", "-v", "error", "-f", "f32le", "-ar", "48000", "-ac", "1", "-i", td + "/t.f32",
+                                   "-af", f"rubberband=tempo={1 / STRETCH_LAST[n]:.4f}:pitch=1:pitchq=quality",
+                                   "-f", "f32le", "-"], capture_output=True, check=True).stdout
+        tail = np.frombuffer(raw2, np.float32).copy()
+        x = int(0.02 * 48000)
+        ramp = np.linspace(0, 1, x, dtype=np.float32)
+        head = y[:i + x].copy()
+        head[-x:] = head[-x:] * (1 - ramp) + tail[:x] * ramp
+        y = np.concatenate([head, tail[x:]])
     # 每個字的開始時間（加快後），用來對齊字幕與動畫
     chars = []
     words = meta["words"]
@@ -103,7 +125,7 @@ def load_vo(vo, n):
         cs = PUNCT.sub("", txt)
         nxt = words[i + 1][0] if i + 1 < len(words) else we
         for j in range(len(cs)):
-            chars.append((ws + (nxt - ws) * j / max(len(cs), 1) - s) / TEMPO)
+            chars.append((ws + (nxt - ws) * j / max(len(cs), 1) - s) / tempo)
     dur = len(y) / 48000
     subs, k = [], 0
     for text in CHUNKS[n]:
@@ -311,6 +333,13 @@ def crystals(args):
     return good, bad
 
 
+def book_cover(args):
+    """書封《來自水的信息》：--book 指定圖檔；沒有的話從講師投影片擷取"""
+    if args.book:
+        return Image.open(args.book).convert("RGB")
+    return grab(os.path.join(args.src, SRC_NAME), 19.7, (520, 470, 1400, 1940))
+
+
 def glow_ring(base, cx, cy, r, color, a):
     """結晶圓圖外圈的柔光"""
     layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
@@ -321,7 +350,7 @@ def glow_ring(base, cx, cy, r, color, a):
 def intro(args, F, out):
     """開頭：只拋問題（這本書的作者做過水結晶實驗——到底是什麼實驗？跟能量有什麼關係？），答案留給講師"""
     src = os.path.join(args.src, SRC_NAME)
-    cover = grab(src, 19.7, (520, 470, 1400, 1940))       # 書封《來自水的信息》
+    cover = book_cover(args)                              # 書封《來自水的信息》
     audio, subs, M, total = build_timeline(args.vo, [1, 2])
     t1, d1, _ = M[1]
     t2, d2, _ = M[2]
@@ -417,7 +446,7 @@ def person_shape(d, cx, top, s, fill):
 
 def outro(args, F, out):
     src = os.path.join(args.src, SRC_NAME)
-    cover = grab(src, 19.7, (520, 470, 1400, 1940))
+    cover = book_cover(args)
     good, bad = crystals(args)
     # 第 5 句（地球七成是水）依使用者要求拿掉；最後一句講完多停一下，收得溫柔
     audio, subs, M, total = build_timeline(args.vo, [3, 4, 6], tail=2.6)
@@ -484,7 +513,7 @@ def outro(args, F, out):
                 top = CY - 340 + 40 * split
                 m = Image.new("L", base.size, 0)
                 person_shape(ImageDraw.Draw(m), cx, top, s, 255)
-                body = Image.new("RGBA", base.size, (255, 255, 255, int(40 * k * a)))
+                body = Image.new("RGBA", base.size, (40, 70, 110, int(150 * k * a)))   # 人形裡的底色（深藍，不要白白空空的）
                 base.alpha_composite(Image.composite(body, Image.new("RGBA", base.size, (0, 0, 0, 0)), m))
                 y_bot, y_top = top + 620 * s, top + 165 * s      # 水位以身體算（頭不放水）
                 wy = y_bot - (y_bot - y_top) * level
@@ -536,6 +565,7 @@ def main():
     ap.add_argument("--only", choices=["intro", "outro", "overlay"])
     ap.add_argument("--good", help="漂亮結晶的圖檔（沒給就從投影片擷取）")
     ap.add_argument("--bad", help="破碎結晶的圖檔（沒給就從投影片擷取）")
+    ap.add_argument("--book", help="書封圖檔（沒給就從投影片擷取）")
     ap.add_argument("--preview", default="", help="只輸出這幾個時間點的畫面，例如 1,5.5,12")
     args = ap.parse_args()
     PREVIEW[:] = [float(x) for x in args.preview.split(",") if x]

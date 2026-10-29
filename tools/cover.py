@@ -7,6 +7,8 @@
 每一集只要換設定檔裡的畫面、標題（lines）與副標。
 grade（選填）是額外的調色（ffmpeg 濾鏡字串），例如臉色太蒼白時加一點對比、自然飽和度與暖色。
 prefilter（選填）是縮放前的濾鏡，例如 atadenoise 用前後幾格合成降雜點，之後銳利化才不會把雜點放大。
+insets（選填）是疊在畫面上的圓形小圖：[{"path", "cx", "cy", "d", "label", "label_style": "gold"|"gray"}]，
+例如水結晶的對比圖；路徑相對於專案根目錄或絕對路徑。
 
 用法：
   python3 tools/cover.py cuts/cover_vol01.json --src <素材資料夾> --font <字型檔> -o output/cover_vol01.jpg
@@ -73,6 +75,32 @@ def main():
     ov[..., 3] = (np.repeat(a, W, axis=1) * 255).astype(np.uint8)
     img.alpha_composite(Image.fromarray(ov, "RGBA"))
     d = ImageDraw.Draw(img)
+
+    # 圓形小圖（例如完整／破碎的水結晶），外圈細框、下方標籤
+    for ins in cfg.get("insets", []):
+        dia = int(ins["d"])
+        pic = Image.open(ins["path"]).convert("RGB")
+        s = min(pic.size)
+        pic = pic.crop(((pic.width - s) // 2, (pic.height - s) // 2, (pic.width + s) // 2, (pic.height + s) // 2))
+        pic = pic.resize((dia, dia), Image.LANCZOS).convert("RGBA")
+        m = Image.new("L", (dia, dia), 0)
+        ImageDraw.Draw(m).ellipse([0, 0, dia - 1, dia - 1], fill=255)
+        pic.putalpha(m)
+        x, y0 = int(ins["cx"] - dia / 2), int(ins["cy"] - dia / 2)
+        sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(sh).ellipse([x + 6, y0 + 16, x + dia + 6, y0 + dia + 16], fill=(0, 0, 0, 150))
+        img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(18)))
+        img.alpha_composite(pic, (x, y0))
+        ring = GOLD if ins.get("label_style", "gold") == "gold" else (175, 178, 188)
+        d.ellipse([x - 3, y0 - 3, x + dia + 3, y0 + dia + 3], outline=ring, width=6)
+        if ins.get("label"):
+            f = font(args.font, 44, 800)
+            tw = d.textlength(ins["label"], font=f)
+            bx, by = ins["cx"], y0 + dia + 10
+            bg = GOLD if ins.get("label_style", "gold") == "gold" else (90, 92, 104)
+            fg = NAVY if ins.get("label_style", "gold") == "gold" else (255, 255, 255)
+            d.rounded_rectangle([bx - tw / 2 - 30, by, bx + tw / 2 + 30, by + 70], radius=35, fill=bg)
+            d.text((bx, by + 35), ins["label"], font=f, fill=fg, anchor="mm")
 
     # 系列標籤列：小 Logo＋「BK 測試｜學員分享」，整組置中（在 3:4 範圍內，正方形時整列裁掉）
     f_tag = font(args.font, 44, 700)
