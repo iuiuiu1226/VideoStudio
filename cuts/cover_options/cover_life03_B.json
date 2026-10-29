@@ -1,0 +1,31 @@
+{
+  "src": "IMG_6552.MOV",
+  "t": 12.2,
+  "frame": {
+    "x": 0.0,
+    "y": 0.0,
+    "w": 2160.0,
+    "h": 3840.0
+  },
+  "series": "BK 測試｜能量小教室",
+  "sub": "好的力量結成六角形 不好的會打散",
+  "logo": "assets/logo.png",
+  "quote_top": 990,
+  "lines": [
+    {
+      "text": "什麼是正能量？",
+      "size": 86,
+      "color": "white",
+      "weight": 800,
+      "gap": 30
+    },
+    {
+      "text": "看水結晶就知道",
+      "size": 118,
+      "color": "gold",
+      "weight": 900
+    }
+  ],
+  "prefilter": "atadenoise=s=9:0a=0.04:0b=0.08:1a=0.04:1b=0.08:2a=0.04:2b=0.08",
+  "grade": "curves=master='0/0 0.25/0.33 0.5/0.62 0.75/0.85 1/1',eq=saturation=1.05,unsharp=5:5:0.8:5:5:0"
+}
