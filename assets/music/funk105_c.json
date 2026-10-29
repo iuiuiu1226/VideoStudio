@@ -1,0 +1,7 @@
+{
+  "model": "lyria-3.5",
+  "prompt": "Feel-good funk pop instrumental at 105 BPM in G minor, laid-back pocket groove, straight 4/4 with a syncopated funk bounce. A clean, bright single-coil electric rhythm guitar plays tight muted funk chops and chord stabs, a round, groovy slap electric bass plays an active syncopated funk bassline, live funk-pop drums with a punchy kick, snappy snare layered with handclaps on 2 and 4, tight 16th-note closed hi-hats and a subtle tambourine. At about 16 seconds a bright, punchy brass section joins with short rhythmic stabs and the groove lifts, then keeps the same full groove at an even level to the end. Groovy, upbeat, energetic, playful and cheerful. Tight, dry, polished modern studio mix with crisp transients and a round low end. No lead melody on top so a voiceover stays clear. Instrumental only, no vocals, no humming, no spoken words.",
+  "mime": "audio/mpeg",
+  "vocals_ok": true,
+  "note": "前 96 秒檢查通過（第一部配樂使用 0–94 秒）"
+}
