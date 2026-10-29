@@ -14,6 +14,8 @@
   gain_keys 是段落內的音量曲線（t 為素材秒數、db 為增益）；style.loudness = "linear" 時整支只做固定增益＋限幅。
   問題字卡：{"card": "文字", "dur": 秒數}，深色底置中白字、無聲。
   overlay 是疊在畫面上的透明動畫檔（例如 qtrle 含 alpha 的 .mov），從該 clip 開頭對齊，疊在字幕底下。
+  xfade 是跟前一段的交叉淡化秒數（畫面溶接）；前一段結尾要留至少這麼長的空白聲音（會被剪掉），
+  這一段的聲音從自己的開頭照常播放，不會被淡掉。
 """
 import argparse
 import json
@@ -118,12 +120,15 @@ def main():
     # 全部在同一條濾鏡鏈裡剪接：每段長度先對齊到整數影格，音訊裁成同樣長度，
     # 避免分段輸出再串接時的影格補齊與 AAC 前置延遲累積，造成字幕與音畫漂移
     inputs, chains, labels, events, t0 = [], [], [], [], 0.0
+    starts, xfades, durs = [], [], []  # 每段在成片的開始時間、與前一段的交叉淡化秒數、長度
     spans = []  # 人物畫面的時間區段（字卡不放標題、Logo）
     n_in = 0
 
     for i, c in enumerate(spec["clips"]):
         raw = c["dur"] if "card" in c else c["out"] - c["in"]
         dur = round(raw * FPS) / FPS
+        xf = round(c.get("xfade", 0.0) * FPS) / FPS if i > 0 else 0.0
+        t0 -= xf  # 交叉淡化：這段提早 xf 秒開始，跟前一段重疊
         if "card" in c:
             inputs += ["-f", "lavfi", "-i",
                        f"color=c={style.get('card_bg', '0x141414')}:s={W}x{H}:r={FPS}:d={dur}",
@@ -190,8 +195,8 @@ def main():
                     events.append((t0 + a, t0 + b, text, "Fx"))
             if c.get("no_overlay"):
                 pass  # 片尾等畫面不放標題、Logo
-            elif spans and abs(spans[-1][1] - t0) < 1e-6:
-                spans[-1][1] = t0 + dur
+            elif spans and t0 <= spans[-1][1] + 1e-6:
+                spans[-1][1] = t0 + dur  # 相接或交叉淡化重疊的段落合併，標題不會重複疊兩行
             else:
                 spans.append([t0, t0 + dur])
         if c.get("overlay"):
@@ -207,7 +212,38 @@ def main():
         chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
                       f"apad,atrim=duration={dur:.4f},asetpts=PTS-STARTPTS,{af}[a{i}]")
         labels.append(f"[v{i}][a{i}]")
+        starts.append(t0)
+        xfades.append(xf)
+        durs.append(dur)
         t0 += dur
+
+    def audio_join(out_label):
+        # 下一段要交叉淡化時，這段結尾的空白聲音剪掉同樣長度，讓下一段的聲音照常從頭播放
+        parts, trims = [], []
+        for i in range(len(labels)):
+            cut = xfades[i + 1] if i + 1 < len(labels) else 0.0
+            if cut > 0:
+                trims.append(f"[a{i}]atrim=duration={durs[i] - cut:.4f},asetpts=PTS-STARTPTS[at{i}]")
+                parts.append(f"[at{i}]")
+            else:
+                parts.append(f"[a{i}]")
+        return ";".join(trims + ["".join(parts) + f"concat=n={len(labels)}:v=0:a=1{out_label}"])
+
+    def video_join(out_label):
+        # 一般接續用 concat，有 xfade 的地方用 xfade 溶接
+        steps, cur = [], "[v0]"
+        for i in range(1, len(labels)):
+            nxt = out_label if i == len(labels) - 1 else f"[vj{i}]"
+            # 兩邊時間基準先統一（concat 輸出與單段的時間基準不同，xfade 會拒絕）
+            steps.append(f"{cur}settb=1/{FPS}[p{i}];[v{i}]settb=1/{FPS}[q{i}]")
+            if xfades[i] > 0:
+                steps.append(f"[p{i}][q{i}]xfade=transition=fade:duration={xfades[i]:.4f}:offset={starts[i]:.4f}{nxt}")
+            else:
+                steps.append(f"[p{i}][q{i}]concat=n=2:v=1:a=0{nxt}")
+            cur = nxt
+        if len(labels) == 1:
+            steps.append(f"[v0]null{out_label}")
+        return ";".join(steps)
 
     # 常駐標題（style.title）與小字（style.note，例如版權），只出現在人物畫面
     for a, b in spans:
@@ -222,8 +258,7 @@ def main():
         # 線性響度：先只跑聲音量整支響度，再整體套一個固定增益＋限幅，逐段的大小關係原樣保留
         # （預設的 loudnorm 是動態的，會把每段各自拉回目標，gain_db 微調會被抵銷）
         achains = [ch for ch in chains if ":a]" in ch]
-        probe = ";".join(achains) + ";" + "".join(f"[a{i}]" for i in range(len(labels))) + \
-            f"concat=n={len(labels)}:v=0:a=1,ebur128[am]"
+        probe = ";".join(achains) + ";" + audio_join("[aj]") + ";[aj]ebur128[am]"
         r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", *inputs, "-filter_complex", probe,
                             "-map", "[am]", "-f", "null", "-"], capture_output=True, text=True)
         measured = float([l.split()[1] for l in r.stderr.splitlines() if l.strip().startswith("I:")][-1])
@@ -231,8 +266,7 @@ def main():
                   "alimiter=limit=0.84:level=false,aresample=48000[ao]")
     else:
         afinal = "[ac]loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[ao]"
-    graph = ";".join(chains) + ";" + "".join(labels) + \
-        f"concat=n={len(labels)}:v=1:a=1[vc][ac];" \
+    graph = ";".join(chains) + ";" + video_join("[vc]") + ";" + audio_join("[ac]") + ";" \
         f"[vc]subtitles={ass}:fontsdir={args.font}[vs];" + afinal
     if style.get("logo"):
         # style.logo：Logo 圖檔，放在標題左側，高度 logo_h，只出現在人物畫面

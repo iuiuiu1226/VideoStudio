@@ -15,7 +15,8 @@
       "src": "output/endcard.mp4",
       "in": 0.0,
       "out": 7.0,
-      "no_overlay": true
+      "no_overlay": true,
+      "xfade": 0.6
     }
   ]
 }

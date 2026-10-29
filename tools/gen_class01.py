@@ -43,9 +43,9 @@ clips = [
         (0.00, 2.68, "結晶是會被某些力量改變的"), (2.72, 4.84, "好的力量會把它弄成"), (4.86, 6.50, "這個六角形"),
         (6.70, 7.76, "不好的力量"), (7.76, 9.40, "會把水結晶打散"), (9.90, 10.96, "所以這其實就是"),
         (10.98, 13.30, "一種能量的體現"), (14.44, 16.28, "那能讓水結晶"), (16.30, 17.62, "結成完整六角形的"),
-        (17.66, 19.05, "我們就叫它正能量")], tail=0.0, overlay="work/life03_anim/overlay1.mov"),
+        (17.66, 19.05, "我們就叫它正能量")], tail=0.0, overlay="work/life03_anim/overlay1.mov", xfade=0.5),
     # 19.05–22.14 是口誤（「這種就會讓它這個負，所以少⋯」），拿掉
-    clip("#2 說好話 做好事 存善心", 22.14, 33.25, [
+    clip("#2 說好話 做好事 存善心", 22.14, 33.6, [
         (22.30, 23.50, "盡量不要罵人"), (23.80, 26.02, "之前會有人推展"), (26.02, 27.20, "說好話"),
         (27.40, 29.76, "做好事 存善心之類的"), (29.76, 31.56, "都是希望我們的水結晶"),
         (31.58, 33.10, "都能變得漂漂亮亮的")], lead=0.0, tail=0.0, overlay="work/life03_anim/overlay2.mov"),
@@ -53,7 +53,7 @@ clips = [
 json.dump({"name": "課堂精華 VOL.01 段落 2｜水結晶與正能量（IMG_6552 原順序，刪最後一句「那這關我們什麼事呢」）",
            "style": STYLE, "clips": clips}, open(os.path.join(OUT, "seg2_water.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 json.dump({"name": "課堂精華 VOL.01 片尾（與學員分享 VOL.01 相同）", "style": STYLE,
-           "clips": [{"id": "#endcard", "src": "output/endcard.mp4", "in": 0.0, "out": 7.0, "no_overlay": True}]},
+           "clips": [{"id": "#endcard", "src": "output/endcard.mp4", "in": 0.0, "out": 7.0, "no_overlay": True, "xfade": 0.6}]},
           open(os.path.join(OUT, "seg4_end.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 for t in (0, 5, 9, 10, 12, 16, 18.5, 22.5, 26, 29, 32):
     print(t, rect_at(t))
@@ -64,5 +64,6 @@ for fname, key, cid, title in (("seg1_intro.json", "intro", "#0 開頭：水結�
                                ("seg3_outro.json", "outro", "#3 結尾：善念還是惡念", "課堂精華 VOL.01 段落 3｜結尾延伸（AI 旁白＋動畫）")):
     a = ANIM[key]
     json.dump({"name": title, "style": STYLE, "clips": [{
-        "id": cid, "src": f"work/life03_anim/{key}.mp4", "in": 0.0, "out": a["dur"], "subs": a["subs"]}]},
+        "id": cid, "src": f"work/life03_anim/{key}.mp4", "in": 0.0, "out": a["dur"], "subs": a["subs"],
+        **({"xfade": 0.5} if key == "outro" else {})}]},
         open(os.path.join(OUT, fname), "w", encoding="utf-8"), ensure_ascii=False, indent=2)

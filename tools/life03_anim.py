@@ -2,12 +2,13 @@
 """課堂精華 VOL.01（水結晶）的自製段落：AI 旁白（Gemini TTS）＋動畫，以及講師段落上的穿插動畫。
 
 開頭（旁白稿 scripts/narration/life03_water_v2.txt 第 1–2 句）：只拋問題，答案留給講師
-  書封《來自水的信息》浮上 →「水結晶實驗」金色六角形畫出 →「水結晶 × 能量」＋問號
-講師段落穿插（透明疊加層，build_segment.py 的 overlay）：
-  「好的力量…六角形」→「謝謝」的漂亮結晶＋金色六角形描邊；「不好的力量…打散」→「煩死了」的破碎結晶＋六角形碎裂；
+  書封《來自水的信息》浮上 →「水結晶實驗」金色六角形畫出 →「水結晶跟能量」＋問號
+講師段落穿插（透明疊加層，build_segment.py 的 overlay），全部放在字幕下方：
+  「好的力量…六角形」→「謝謝」的漂亮結晶＋柔光；「不好的力量…打散」→「煩死了」的破碎結晶＋震動；
   「正能量」→ 金色大字；「說好話、做好事、存善心」→ 三個金色標籤
-結尾（第 3–6 句）：文字／聲音／念頭圖示＋能量波紋 → 人形注水六到七成 → 地球七成是水 → 善念 vs 惡念（最後多停一下）
-結晶照片、書封取自講師投影片（素材 IMG_6552 的 19–22 秒鏡頭帶過投影片的畫面）。
+結尾（第 3、4、6 句；第 5 句地球依使用者要求拿掉）：文字／聲音／念頭圖示＋能量波紋 → 人形注水六到七成 →
+  分成兩個人，身體裡各有一個結晶：完整的是善念、破碎的是惡念（最後多停一下）
+書封取自講師投影片（素材 IMG_6552 的 19–22 秒）；結晶圖用 --good／--bad 指定，沒給就從投影片擷取。
 
 輸出 --out 資料夾：intro.mp4、outro.mp4（含旁白）、overlay1.mov、overlay2.mov（透明疊加層）
 與 subs.json（開頭、結尾各自的字幕，秒數從 0 起算），再用 build_segment.py 接成成片。
@@ -41,7 +42,7 @@ SRC_NAME = "IMG_6552.MOV"
 # 每句旁白的字幕分段（顯示用文字；配音稿的「姜本勝」「姜本聖」是讀音寫法，字幕寫「江本勝」）
 CHUNKS = {
     1: ["這本《來自水的信息》", "的作者江本勝", "做過一個很有名的", "「水結晶實驗」"],
-    2: ["到底是什麼實驗？", "水結晶，又跟能量", "有什麼關係呢？"],
+    2: ["到底是什麼實驗？", "水結晶跟能量", "有什麼關係呢？"],
     3: ["江本勝認為", "文字、聲音、念頭", "都帶著訊息的能量"],
     4: ["人體約有六到七成是水"],
     5: ["地球表面約七成被水覆蓋"],
@@ -295,6 +296,28 @@ def render(path, frames_fn, total, audio=None):
         p.wait()
 
 
+def square(img):
+    """置中裁成正方形（結晶圖裁成圓形用）"""
+    s = min(img.size)
+    x, y = (img.width - s) // 2, (img.height - s) // 2
+    return img.crop((x, y, x + s, y + s))
+
+
+def crystals(args):
+    """漂亮／破碎的結晶圖：--good、--bad 指定圖檔；沒有的話從講師投影片擷取"""
+    src = os.path.join(args.src, SRC_NAME)
+    good = square(Image.open(args.good).convert("RGB")) if args.good else grab(src, 20.7, (10, 1350, 680, 680))
+    bad = square(Image.open(args.bad).convert("RGB")) if args.bad else grab(src, 22.2, (1016, 1447, 780, 780))
+    return good, bad
+
+
+def glow_ring(base, cx, cy, r, color, a):
+    """結晶圓圖外圈的柔光"""
+    layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    ImageDraw.Draw(layer).ellipse([cx - r, cy - r, cx + r, cy + r], outline=color + (int(200 * a),), width=14)
+    base.alpha_composite(layer.filter(ImageFilter.GaussianBlur(14)))
+
+
 def intro(args, F, out):
     """開頭：只拋問題（這本書的作者做過水結晶實驗——到底是什麼實驗？跟能量有什麼關係？），答案留給講師"""
     src = os.path.join(args.src, SRC_NAME)
@@ -304,7 +327,7 @@ def intro(args, F, out):
     t2, d2, _ = M[2]
     w_exp = word_t(M, 1, 22)       # 「水結晶實驗」（第 22 個字起，不含標點）
     w_what = word_t(M, 2, 0)       # 「到底是什麼實驗？」
-    w_energy = word_t(M, 2, 7)     # 「水結晶，又跟能量」
+    w_energy = word_t(M, 2, 7)     # 「水結晶跟能量」
     CY = 800
 
     def frame(t):
@@ -328,86 +351,81 @@ def intro(args, F, out):
             if q > 0.01:
                 layer_text(base, (W / 2, CY + 60), "？", F(max(8, int(260 * q)), 900), GOLD, stroke=6)
         if t >= w_energy - 0.05:
-            # 「水結晶，又跟能量有什麼關係呢？」
+            # 「水結晶跟能量有什麼關係呢？」
             e = pop((t - w_energy + 0.05) / 0.45)
             if e > 0.01:
-                layer_text(base, (W / 2, CY - 330), "水結晶 × 能量", F(max(8, int(92 * e)), 900), WHITE, stroke=4)
+                layer_text(base, (W / 2, CY - 330), "水結晶跟能量", F(max(8, int(92 * e)), 900), WHITE, stroke=4)
             sparkle(base, W / 2, CY + 60, t, rad=330)
-        # 結尾淡到黑，接講師畫面
-        if t > total - 0.3:
-            base = Image.blend(base.convert("RGB"), canvas((0, 0, 0)), ease((t - (total - 0.3)) / 0.3)).convert("RGBA")
-        return base
+        return base   # 接講師畫面的轉場由 build_segment 的 xfade 交叉淡化
 
     render(os.path.join(out, "intro.mp4"), frame, total, audio)
     return subs, total
 
 
-def overlays(args, F, out):
-    """講師段落上的穿插動畫（透明疊加層），時間用素材秒數；片段 1 是素材 0–19.05 秒，片段 2 是 22.14–33.25 秒"""
-    src = os.path.join(args.src, SRC_NAME)
-    good = grab(src, 20.7, (10, 1350, 680, 680))
-    bad = grab(src, 22.2, (1016, 1447, 780, 780))
-    Y = 990            # 放在臉的下方（臉約在 y 530–740），不會擋到臉，也在字幕（約 1180 起）上方
-    R = 300            # 結晶圓圖直徑
+CLIP2_IN, CLIP2_OUT = 22.14, 33.6   # 講師片段 2 的素材時間（cuts/class01/seg2_water.json）
 
-    def crystal(base, img, s, a, b, x, hexa=None, shatter=None, label=None, lab_fg=NAVY, lab_bg=GOLD):
+
+def overlays(args, F, out):
+    """講師段落上的穿插動畫（透明疊加層），時間用素材秒數；片段 1 是素材 0–19.05 秒，片段 2 是 22.14–33.6 秒。
+    全部放在字幕下方（字幕約在 y 1180–1260），不擋講師。"""
+    good, bad = crystals(args)
+    Y = 1530           # 結晶圓圖中心（字幕下方）
+    R = 400            # 結晶圓圖直徑
+
+    def crystal(base, img, s, a, b, glow=None, shatter=None, label=None, lab_fg=NAVY, lab_bg=GOLD):
         if not (a - 0.05 <= s <= b + 0.35):
             return
         k = ease((s - a) / 0.35) * (1.0 - ease((s - b) / 0.35))
-        paste_card(base, img, x, Y, R, scale=0.85 + 0.15 * k, alpha=k, radius=R / 2)
-        if hexa is not None and s >= hexa:
-            draw_hex_progress(base, x, Y, R * 0.62, ease((s - hexa) / 0.8) * (1 if s < b else k), width=7)
-            if s >= hexa + 0.6:
-                sparkle(base, x, Y, s, n=8, rad=R * 0.66)
-        if shatter is not None:
-            if s < shatter:
-                draw_hex_progress(base, x, Y, R * 0.62, k, color=(210, 210, 220), width=7, glow=False)
-            else:
-                draw_hex_shatter(base, x, Y, R * 0.62, min((s - shatter) / 1.0, 1.0), width=7)
+        shake = 7 * math.sin(s * 70) * max(0.0, 1 - (s - shatter) / 0.5) if shatter and s >= shatter else 0
+        if glow is not None and s >= glow:
+            glow_ring(base, W / 2, Y, R / 2 + 10, GOLD, k * min(1.0, (s - glow) / 0.5))
+        paste_card(base, img, W / 2 + shake, Y, R, scale=0.85 + 0.15 * k, alpha=k, radius=R / 2)
+        if glow is not None and s >= glow + 0.3:
+            sparkle(base, W / 2, Y, s, n=8, rad=R / 2 + 50)
         if label:
-            pill(base, x, Y - R / 2 - 30, label, F(44, 800), lab_fg, lab_bg, scale=pop((s - a) / 0.4), alpha=k)
+            pill(base, W / 2, Y + R / 2 + 52, label, F(46, 800), lab_fg, lab_bg, scale=pop((s - a) / 0.4), alpha=k)
 
     def frame1(t):
         s = t                                   # 片段 1 從素材 0 秒開始
         base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        crystal(base, good, s, 3.30, 6.70, 290, hexa=4.86, label="謝謝")
-        crystal(base, bad, s, 6.95, 9.90, 290, shatter=8.86, label="煩死了", lab_fg=WHITE, lab_bg=(90, 92, 104))
+        crystal(base, good, s, 3.30, 6.70, glow=4.86, label="謝謝")
+        crystal(base, bad, s, 6.95, 9.90, shatter=8.86, label="煩死了", lab_fg=WHITE, lab_bg=(90, 92, 104))
         if s >= 18.15:
             e = pop((s - 18.15) / 0.4)
             if e > 0.01:
-                layer_text(base, (300, Y), "正能量", F(max(8, int(120 * e)), 900), GOLD, stroke=6)
+                layer_text(base, (W / 2, 1470), "正能量", F(max(8, int(130 * e)), 900), GOLD, stroke=6)
         return base
 
     def frame2(t):
-        s = t + 22.14                           # 片段 2 從素材 22.14 秒開始
+        s = t + CLIP2_IN
         base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         end = 29.9
         if 25.9 <= s <= end + 0.4:
             fade = 1.0 - ease((s - end) / 0.4)
             for i, (txt, ts) in enumerate((("說好話", 26.02), ("做好事", 27.60), ("存善心", 28.28))):
                 if s >= ts - 0.05:
-                    pill(base, 860, 830 + i * 120, txt, F(54, 800), NAVY, GOLD, scale=pop((s - ts + 0.05) / 0.4), alpha=fade)
+                    pill(base, 215 + i * 325, 1460, txt, F(58, 800), NAVY, GOLD,
+                         scale=pop((s - ts + 0.05) / 0.4), alpha=fade)
         return base
 
     render(os.path.join(out, "overlay1.mov"), frame1, 19.05)
-    render(os.path.join(out, "overlay2.mov"), frame2, 33.25 - 22.14)
+    render(os.path.join(out, "overlay2.mov"), frame2, CLIP2_OUT - CLIP2_IN)
 
 
 def person_shape(d, cx, top, s, fill):
     """簡單人形：頭＋身體（圓角）"""
     d.ellipse([cx - 70 * s, top, cx + 70 * s, top + 140 * s], fill=fill)
-    d.rounded_rectangle([cx - 135 * s, top + 165 * s, cx + 135 * s, top + 620 * s], radius=110 * s, fill=fill)
+    d.rounded_rectangle([cx - 150 * s, top + 165 * s, cx + 150 * s, top + 620 * s], radius=120 * s, fill=fill)
 
 
 def outro(args, F, out):
     src = os.path.join(args.src, SRC_NAME)
     cover = grab(src, 19.7, (520, 470, 1400, 1940))
-    good = grab(src, 20.7, (10, 1350, 680, 680))
-    bad = grab(src, 22.2, (1016, 1447, 780, 780))
-    audio, subs, M, total = build_timeline(args.vo, [3, 4, 5, 6], tail=1.4)   # 最後一句講完多停一下，收得溫柔
+    good, bad = crystals(args)
+    # 第 5 句（地球七成是水）依使用者要求拿掉；最後一句講完多停一下，收得溫柔
+    audio, subs, M, total = build_timeline(args.vo, [3, 4, 6], tail=1.4)
     t5, d5, _ = M[3]
     t6, d6, _ = M[4]
-    t7, d7, _ = M[5]
     t8, d8, _ = M[6]
     w_word, w_sound, w_mind = word_t(M, 3, 5), word_t(M, 3, 7), word_t(M, 3, 9)
     w_energy = word_t(M, 3, 17)
@@ -456,58 +474,53 @@ def outro(args, F, out):
                     a = int(200 * (1 - ph) * fade)
                     ld.ellipse([W / 2 - r, CY - 60 - r, W / 2 + r, CY - 60 + r], outline=BLUE + (a,), width=6)
                 base.alpha_composite(layer.filter(ImageFilter.GaussianBlur(2)))
-        if t6 - 0.3 <= t < t7 - 0.05:
-            # 人體六到七成是水：人形從下往上注水，水面有波浪
+        if t >= t6 - 0.3:
+            # 人體六到七成是水：人形從下往上注水；最後一句時分成兩個人，身體裡各有一個結晶（善念／惡念）
             k = ease((t - (t6 - 0.3)) / 0.4)
-            fade = 1.0 - ease((t - (t7 - 0.4)) / 0.35)
-            s, top, cx = 0.95, CY - 340, W / 2
-            m = Image.new("L", base.size, 0)
-            person_shape(ImageDraw.Draw(m), cx, top, s, 255)
-            body = Image.new("RGBA", base.size, (255, 255, 255, 0))
-            ImageDraw.Draw(body).rectangle([0, 0, W, H], fill=(255, 255, 255, int(40 * k * fade)))
-            base.alpha_composite(Image.composite(body, Image.new("RGBA", base.size, (0, 0, 0, 0)), m))
+            split = ease((t - (t8 - 0.2)) / 0.7)
             level = 0.65 * ease((t - t6) / (d6 * 0.8))
-            y_bot, y_top = top + 620 * s, top
-            wy = y_bot - (y_bot - y_top) * level
-            water = Image.new("RGBA", base.size, (0, 0, 0, 0))
-            wd = ImageDraw.Draw(water)
-            pts = [(x, wy + 12 * math.sin(x / 55 + t * 5)) for x in range(int(cx - 160), int(cx + 161), 8)]
-            wd.polygon(pts + [(cx + 160, y_bot + 10), (cx - 160, y_bot + 10)], fill=BLUE + (int(230 * k * fade),))
-            base.alpha_composite(Image.composite(water, Image.new("RGBA", base.size, (0, 0, 0, 0)), m))
-            outline = Image.new("RGBA", base.size, (0, 0, 0, 0))
-            om = m.filter(ImageFilter.FIND_EDGES).filter(ImageFilter.MaxFilter(5))
-            outline.paste((255, 255, 255, int(255 * k * fade)), (0, 0), om)
-            base.alpha_composite(outline)
-            pct = int(round(70 * ease((t - t6) / (d6 * 0.8))))
-            layer_text(base, (cx + 300, CY - 40), f"60–{pct}%" if pct > 60 else f"{pct}%",
-                       F(80, 900), GOLD, alpha=k * fade, stroke=3)
-        if t7 - 0.3 <= t < t8 - 0.05:
-            # 地球七成是水：圓形依序填滿 70% 藍色
-            k = ease((t - (t7 - 0.3)) / 0.4)
-            fade = 1.0 - ease((t - (t8 - 0.4)) / 0.35)
-            r, cx, cy = 300 * (0.9 + 0.1 * k), W / 2, CY - 40
-            layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
-            ld = ImageDraw.Draw(layer)
-            ld.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(70, 120, 80, int(255 * k * fade)))
-            sweep = 252 * ease((t - t7) / (d7 * 0.75))
-            ld.pieslice([cx - r, cy - r, cx + r, cy + r], -90, -90 + sweep, fill=BLUE + (int(255 * k * fade),))
-            ld.ellipse([cx - r, cy - r, cx + r, cy + r], outline=WHITE + (int(220 * k * fade),), width=6)
-            base.alpha_composite(layer)
-            pct = int(round(70 * ease((t - t7) / (d7 * 0.75))))
-            layer_text(base, (cx, cy), f"{pct}%", F(130, 900), WHITE, alpha=k * fade, stroke=5)
-        if t >= t8 - 0.3:
-            # 善念 vs 惡念：左右兩個結晶，問號
-            k = ease((t - (t8 - 0.3)) / 0.5)
-            paste_card(base, good, 275, CY - 40, 380, scale=0.9 + 0.1 * k, alpha=k, radius=190)
-            paste_card(base, bad, 805, CY - 40, 380, scale=0.9 + 0.1 * k, alpha=k, radius=190)
-            if t >= w_good - 0.05:
-                pill(base, 275, CY + 230, "善念", F(60, 800), NAVY, GOLD, scale=pop((t - w_good) / 0.4))
-            if t >= w_bad - 0.05:
-                pill(base, 805, CY + 230, "惡念", F(60, 800), WHITE, (90, 92, 104), scale=pop((t - w_bad) / 0.4))
-            if t >= w_bad + 0.3:
-                q = pop((t - w_bad - 0.3) / 0.45)
-                if q > 0.01:
-                    layer_text(base, (W / 2, CY - 40), "？", F(max(8, int(170 * q)), 900), GOLD, stroke=6)
+            s = 0.95 - 0.17 * split
+            people = [(W / 2 - 250 * split, 1.0)]
+            if split > 0:
+                people.append((W / 2 + 250 * split, split))
+            for n, (cx, a) in enumerate(people):
+                top = CY - 340 + 40 * split
+                m = Image.new("L", base.size, 0)
+                person_shape(ImageDraw.Draw(m), cx, top, s, 255)
+                body = Image.new("RGBA", base.size, (255, 255, 255, int(40 * k * a)))
+                base.alpha_composite(Image.composite(body, Image.new("RGBA", base.size, (0, 0, 0, 0)), m))
+                y_bot, y_top = top + 620 * s, top + 165 * s      # 水位以身體算（頭不放水）
+                wy = y_bot - (y_bot - y_top) * level
+                water = Image.new("RGBA", base.size, (0, 0, 0, 0))
+                pts = [(x, wy + 12 * math.sin(x / 55 + t * 5 + n))
+                       for x in range(int(cx - 170 * s), int(cx + 171 * s), 8)]   # 波浪水面
+                ImageDraw.Draw(water).polygon(pts + [(cx + 170 * s, y_bot + 10), (cx - 170 * s, y_bot + 10)],
+                                              fill=BLUE + (int(190 * k * a),))
+                base.alpha_composite(Image.composite(water, Image.new("RGBA", base.size, (0, 0, 0, 0)), m))
+                outline = Image.new("RGBA", base.size, (0, 0, 0, 0))
+                om = m.filter(ImageFilter.FIND_EDGES).filter(ImageFilter.MaxFilter(5))
+                outline.paste((255, 255, 255, int(255 * k * a)), (0, 0), om)
+                base.alpha_composite(outline)
+                # 身體裡的結晶：左邊完整（善念）、右邊破碎（惡念）
+                chest = top + 360 * s
+                if n == 0 and t >= w_good - 0.1:
+                    g = ease((t - (w_good - 0.1)) / 0.45)
+                    glow_ring(base, cx, chest, 130 * s + 6, GOLD, g)
+                    paste_card(base, good, cx, chest, 260 * s, scale=0.7 + 0.3 * pop((t - w_good + 0.1) / 0.45),
+                               alpha=g, radius=130 * s, shadow=False)
+                    sparkle(base, cx, chest, t, n=6, rad=150 * s)
+                    pill(base, cx, top + 620 * s + 70, "善念", F(56, 800), NAVY, GOLD, scale=pop((t - w_good) / 0.4))
+                if n == 1 and t >= w_bad - 0.1:
+                    g = ease((t - (w_bad - 0.1)) / 0.45)
+                    shake = 5 * math.sin(t * 60) * max(0.0, 1 - (t - w_bad) / 0.6)
+                    paste_card(base, bad, cx + shake, chest, 260 * s, scale=0.7 + 0.3 * pop((t - w_bad + 0.1) / 0.45),
+                               alpha=g, radius=130 * s, shadow=False)
+                    pill(base, cx, top + 620 * s + 70, "惡念", F(56, 800), WHITE, (90, 92, 104),
+                         scale=pop((t - w_bad) / 0.4))
+            if split <= 0:
+                pct = int(round(70 * ease((t - t6) / (d6 * 0.8))))
+                layer_text(base, (W / 2 + 300, CY - 40), f"60–{pct}%" if pct > 60 else f"{pct}%",
+                           F(80, 900), GOLD, alpha=k * (1 - ease((t - (t8 - 0.6)) / 0.4)), stroke=3)
         return base
 
     render(os.path.join(out, "outro.mp4"), frame, total, audio)
@@ -521,6 +534,8 @@ def main():
     ap.add_argument("--font", required=True, help="NotoSansTC 字型檔")
     ap.add_argument("--out", required=True)
     ap.add_argument("--only", choices=["intro", "outro", "overlay"])
+    ap.add_argument("--good", help="漂亮結晶的圖檔（沒給就從投影片擷取）")
+    ap.add_argument("--bad", help="破碎結晶的圖檔（沒給就從投影片擷取）")
     ap.add_argument("--preview", default="", help="只輸出這幾個時間點的畫面，例如 1,5.5,12")
     args = ap.parse_args()
     PREVIEW[:] = [float(x) for x in args.preview.split(",") if x]
