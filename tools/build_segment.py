@@ -14,6 +14,8 @@
   gain_keys 是段落內的音量曲線（t 為素材秒數、db 為增益）；style.loudness = "linear" 時整支只做固定增益＋限幅。
   問題字卡：{"card": "文字", "dur": 秒數}，深色底置中白字、無聲。
   overlay 是疊在畫面上的透明動畫檔（例如 qtrle 含 alpha 的 .mov），從該 clip 開頭對齊，疊在字幕底下。
+  style.shift_y（或 clip 的 shift_y）把畫面往下移幾個像素，頂端用鏡像模糊補：IG Reels 上方介面會蓋住畫面頂端約 260 px，
+  標題放在那下面（y 274 起），人物頭頂太高的影片要讓出空間。
   xfade 是跟前一段的交叉淡化秒數（畫面溶接）；前一段結尾要留至少這麼長的空白聲音（會被剪掉），
   這一段的聲音從自己的開頭照常播放，不會被淡掉。
 """
@@ -91,8 +93,8 @@ ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Default,{style['font']},{style['size']},&H00FFFFFF,&H00FFFFFF,&H00202020,&H80000000,-1,0,0,0,100,100,2,0,1,{style['outline']},{style['shadow']},2,80,80,{style['margin_v']},1
-Style: Title,{style['font']},{style.get('title_size', 60)},&H00FFFFFF,&H00FFFFFF,&H00202020,&H80000000,-1,0,0,0,100,100,3,0,1,{style['outline']},{style['shadow']},{style.get('title_align', 8)},{style.get('title_margin_l', 80)},80,{style.get('title_margin', 200)},1
-Style: Note,{style['font']},{style.get('note_size', 32)},&H50FFFFFF,&H50FFFFFF,&H80202020,&H00000000,0,0,0,0,100,100,2,0,1,2,0,{style.get('title_align', 8)},{style.get('title_margin_l', 80)},80,{style.get('note_margin', 275)},1
+Style: Title,{style['font']},{style.get('title_size', 54)},&H00FFFFFF,&H00FFFFFF,&H00202020,&H80000000,-1,0,0,0,100,100,3,0,1,{style['outline']},{style['shadow']},{style.get('title_align', 8)},{style.get('title_margin_l', 80)},80,{style.get('title_margin', 274)},1
+Style: Note,{style['font']},{style.get('note_size', 28)},&H50FFFFFF,&H50FFFFFF,&H80202020,&H00000000,0,0,0,0,100,100,2,0,1,2,0,{style.get('title_align', 8)},{style.get('title_margin_l', 80)},80,{style.get('note_margin', 336)},1
 Style: Card,{style['font']},{style.get('card_size', 84)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,4,0,1,0,0,5,80,80,0,1
 Style: Fx,{style['font']},{style.get('fx_size', 96)},&H004DD8FF,&H004DD8FF,&H00202020,&H80000000,-1,0,0,0,100,100,2,0,1,6,2,5,0,0,0,1
 
@@ -172,6 +174,12 @@ def main():
             trc = is_hdr(src)
             if trc:
                 vf = vf.replace("format=yuv420p,setsar=1", tonemap_chain(trc) + "format=yuv420p,setsar=1")
+            sy = 0 if c.get("no_overlay") else int(c.get("shift_y", style.get("shift_y", 0)))
+            if sy:
+                # 整個畫面往下移 sy 像素：標題放在 IG 上方介面下面（見 build_ass），人物頭頂要讓出空間。
+                # 底部裁掉 sy，頂端空出的窄條用最上面幾列鏡像＋模糊補上（手機上會在狀態列底下）
+                vf += (f",split[sa{i}][sb{i}];[sb{i}]crop={W}:{sy}:0:0,vflip,gblur=sigma=14[st{i}];"
+                       f"[sa{i}]crop={W}:{H - sy}:0:0[sm{i}];[st{i}][sm{i}]vstack")
             # 逐段把響度拉到同一基準，不同手機、不同距離錄的人聲才不會忽大忽小
             # "auto_gain": false 時不自動對齊，只用 gain_db／gain_keys（音量曲線已經算好絕對大小時用）
             lufs = measure_lufs(src, c["in"], dur) if c.get("auto_gain", True) else None

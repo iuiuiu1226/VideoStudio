@@ -385,7 +385,7 @@ def intro(args, F, out):
             # 「到底是什麼實驗？」起，上方標題「水結晶 × 能量」
             e = pop((t - w_what + 0.05) / 0.45)
             if e > 0.01:
-                layer_text(base, (W / 2, CY - 330), "水結晶 × 能量", F(max(8, int(92 * e)), 900), WHITE, stroke=4)
+                layer_text(base, (W / 2, CY - 300), "水結晶 × 能量", F(max(8, int(92 * e)), 900), WHITE, stroke=4)
         return base   # 接講師畫面的轉場由 build_segment 的 xfade 交叉淡化
 
     render(os.path.join(out, "intro.mp4"), frame, total, audio)
