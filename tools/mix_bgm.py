@@ -7,6 +7,8 @@
   - --music-eq：音樂先過等化，例如在人聲最需要的中頻讓出空間（音樂存在感不變、人聲更清楚）
   - --duck-ratio：講話時壓低音樂的力道（壓縮比）；--no-duck 則音樂維持固定音量（不會忽大忽小）
   - --start：音樂從第幾秒開始用；開頭短淡入、結尾 --fade-out 秒淡出
+  - --curve：音樂音量曲線（成片秒數:dB，用逗號隔開，中間直線變化），例如結尾是問句、要留懸念時
+    "55.9:0,61.5:-10,64.5:-40,65.5:-80"＝講最後一句時慢慢小 10 dB、講完後的停頓淡到幾乎沒有、片尾不放
   - --lufs：整支響度調到目標（兩段式 loudnorm 線性調整，不改變人聲與音樂的比例）；沒給就只限幅
   - 最後加限幅器，避免爆音；影像串流直接複製
 
@@ -32,6 +34,15 @@ def duration(path):
     return float(r.stdout.strip())
 
 
+def curve_expr(spec):
+    """「秒:dB,秒:dB,…」→ ffmpeg volume 的逐格增益運算式（dB 直線內插，前後延用端點值）"""
+    pts = sorted((float(a), float(b)) for a, b in (p.split(":") for p in spec.split(",")))
+    expr = f"pow(10,{pts[-1][1]:g}/20)"
+    for (t1, d1), (t2, d2) in reversed(list(zip(pts, pts[1:]))):
+        expr = f"if(lt(t,{t2:g}),pow(10,({d1:g}+({d2 - d1:g})*(t-{t1:g})/{t2 - t1:.3f})/20),{expr})"
+    return f"if(lt(t,{pts[0][0]:g}),pow(10,{pts[0][1]:g}/20),{expr})"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("video")
@@ -45,6 +56,7 @@ def main():
     ap.add_argument("--start", type=float, default=0.0, help="音樂從第幾秒開始用")
     ap.add_argument("--fade-out", type=float, default=2.0)
     ap.add_argument("--lufs", type=float, help="整支響度目標（例如 -14）")
+    ap.add_argument("--curve", default="", help="音樂音量曲線「成片秒數:dB,…」，例如 55.9:0,61.5:-10,64.5:-40")
     args = ap.parse_args()
 
     dur = duration(args.video)
@@ -59,7 +71,8 @@ def main():
              f"[1:a]atrim=start={args.start}:duration={dur},asetpts=PTS-STARTPTS,"
              f"aformat=sample_rates=48000:channel_layouts=stereo,"
              f"afade=t=in:d=0.3,afade=t=out:st={max(0.0, dur - args.fade_out):.3f}:d={args.fade_out},"
-             f"{args.music_eq + ',' if args.music_eq else ''}volume={music_db:.2f}dB[m];"
+             f"{args.music_eq + ',' if args.music_eq else ''}volume={music_db:.2f}dB"
+             + (f",volume='{curve_expr(args.curve)}':eval=frame" if args.curve else "") + "[m];"
              + ("[key]anullsink;[m]anull[duck];" if args.no_duck else
                 f"[m][key]sidechaincompress=threshold=0.02:ratio={args.duck_ratio}:attack=40:release=800:knee=4[duck];") +
              "[v][duck]amix=inputs=2:duration=first:normalize=0")

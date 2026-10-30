@@ -1,0 +1,7 @@
+{
+  "model": "lyria-3.5",
+  "prompt": "Curious and bright documentary background music for a popular science explainer, about 100 BPM in D major. Small chamber ensemble only: pizzicato violins and cellos playing a light, bouncing ostinato, soft felt piano chords, warm upright bass and a light brushed snare. Warm, intelligent and quietly fascinated, a sense of discovery, steadily moving forward, medium energy. Smooth, even level throughout, no big hits or drops. Keep the midrange uncluttered with no prominent lead melody so speech stays clear on top. Instrumental only, no vocals, no producer tags, no spoken words.",
+  "mime": "audio/mpeg",
+  "vocals_ok": true,
+  "note": "前 72 秒（課堂精華 VOL.01 用到的長度）人聲檢查通過（含製作人浮水印檢查）；原檔 class01_science_6_unchecked.mp3"
+}
