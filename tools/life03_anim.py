@@ -32,7 +32,7 @@ from build_segment import tonemap_chain
 W, H, FPS = 1080, 1920, 30
 TEMPO = 1.12                 # 旁白稍微加快（音高不變）
 LINE_TEMPO = {6: 1.0}        # 最後一句「還是惡念呢？」不加快，尾音自然拉長
-KEEP_TAIL = {2, 6}           # 這幾句不切掉結尾的餘音（尾音自然淡出）
+KEEP_TAIL = {2, 6, 7}        # 這幾句不切掉結尾的餘音（尾音自然淡出）
 # 最後一個字（「呢」）單獨放慢幾倍，尾音像真人一樣拉長；第 2 句整句加快 1.12 倍，放慢 1.8 倍才跟第 6 句的「呢」一樣長
 STRETCH_LAST = {2: 1.8, 6: 1.6}
 HEAD, GAP, TAIL = 0.35, 0.28, 0.55
@@ -51,6 +51,7 @@ CHUNKS = {
     4: ["人體約有六到七成是水"],
     5: ["地球表面約七成被水覆蓋"],
     6: ["我們每天給出的", "是善念 還是惡念呢？"],
+    7: ["而這些訊息能量的正負", "會影響水結晶的變化"],
 }
 PUNCT = re.compile(r"[\s，。、「」《》？！,.?!|]")
 
@@ -449,14 +450,18 @@ def outro(args, F, out):
     src = os.path.join(args.src, SRC_NAME)
     cover = book_cover(args)
     good, bad = crystals(args)
-    # 第 5 句（地球七成是水）依使用者要求拿掉；最後一句講完多停一下，收得溫柔
-    audio, subs, M, total = build_timeline(args.vo, [3, 4, 6], tail=2.6)
+    # 第 5 句（地球七成是水）依使用者要求拿掉；第 7 句（訊息能量的正負會影響水結晶）接在第 3 句後面，
+    # 帶出為什麼講到人體的水；最後一句講完多停一下，收得溫柔
+    audio, subs, M, total = build_timeline(args.vo, [3, 7, 4, 6], tail=2.6)
     t5, d5, _ = M[3]
+    t7, d7, _ = M[7]
     t6, d6, _ = M[4]
     t8, d8, _ = M[6]
     w_word, w_sound, w_mind = word_t(M, 3, 5), word_t(M, 3, 7), word_t(M, 3, 9)
     w_energy = word_t(M, 3, 17)
     w_good, w_bad = word_t(M, 6, 8), word_t(M, 6, 12)
+    w_pos, w_neg = word_t(M, 7, 8), word_t(M, 7, 9)                                          # 「正」「負」
+    w_aff, w_water, w_change = word_t(M, 7, 10), word_t(M, 7, 13), word_t(M, 7, 17)          # 「會影響」「水結晶」「變化」
     CY = 760
 
     def icon(base, kind, cx, cy, s, a):
@@ -486,11 +491,12 @@ def outro(args, F, out):
             paste_card(base, cover, W / 2, CY - 20, 420, scale=0.95 + 0.05 * min(t / w_word, 1.0), alpha=k)
         if t < t6 - 0.1:
             fade = 1.0 - ease((t - (t6 - 0.5)) / 0.4)
+            c = ease((t - (t7 - 0.05)) / 0.5)    # 第 7 句一開始，三個圖示收到中間、變成結晶圓圖
             for kind, ts, label, x in (("文", w_word, "文字", 230), ("聲", w_sound, "聲音", 540), ("念", w_mind, "念頭", 850)):
-                if t >= ts - 0.1:
+                if t >= ts - 0.1 and c < 0.99:
                     s = pop((t - ts + 0.1) / 0.45)
-                    icon(base, kind, x, CY - 60, 0.9 * s, fade)
-                    layer_text(base, (x, CY + 110), label, F(52, 700), WHITE, alpha=fade * min(1.0, s))
+                    icon(base, kind, x + (W / 2 - x) * c, CY - 60 - 20 * c, 0.9 * s * (1 - 0.6 * c), fade * (1 - c))
+                    layer_text(base, (x, CY + 110), label, F(52, 700), WHITE, alpha=fade * min(1.0, s) * (1 - c))
             if t >= w_energy - 0.3:
                 # 能量波紋：從中間往外擴散的同心圓
                 layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
@@ -498,9 +504,51 @@ def outro(args, F, out):
                 for i in range(4):
                     ph = ((t - (w_energy - 0.3)) * 0.9 + i * 0.25) % 1.0
                     r = 140 + 520 * ph
-                    a = int(200 * (1 - ph) * fade)
+                    a = int(200 * (1 - ph) * fade * (1 - c))
                     ld.ellipse([W / 2 - r, CY - 60 - r, W / 2 + r, CY - 60 + r], outline=BLUE + (a,), width=6)
                 base.alpha_composite(layer.filter(ImageFilter.GaussianBlur(2)))
+        if t7 + 0.15 <= t < t6 - 0.1:
+            # 第 7 句：中間一個結晶圓圖，下方「正／負」指示條；指標「會影響」到正（完整結晶）、
+            # 「水結晶」到負（破碎結晶、晃一下）、「變化」回到正，接著接人形
+            k = ease((t - (t7 + 0.15)) / 0.4) * fade
+            ccx, ccy, R = W / 2, CY - 80, 440
+            p = -ease((t - w_aff) / 0.35) + 2 * ease((t - w_water) / 0.35) - 2 * ease((t - w_change) / 0.35)
+            m = ease((t - (w_aff - 0.1)) / 0.35)          # 結晶圖出現
+            layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
+            ld = ImageDraw.Draw(layer)
+            ld.ellipse([ccx - R / 2, ccy - R / 2, ccx + R / 2, ccy + R / 2], fill=(40, 70, 110, int(200 * k)))
+            for i in range(3):    # 結晶出現前，圓裡是水波
+                ph = ((t - t7) * 0.8 + i / 3) % 1.0
+                r = R / 2 * ph
+                ld.ellipse([ccx - r, ccy - r, ccx + r, ccy + r], outline=BLUE + (int(170 * (1 - ph) * k * (1 - m)),), width=5)
+            base.alpha_composite(layer)
+            if p < 0:
+                glow_ring(base, ccx, ccy, R / 2 + 10, GOLD, k * m * -p)
+            shake = 7 * math.sin(t * 70) * max(0.0, 1 - (t - w_water) / 0.5) * max(0.0, p) if t >= w_water else 0
+            paste_card(base, bad, ccx + shake, ccy, R, alpha=k * m, radius=R / 2, shadow=False)
+            paste_card(base, good, ccx, ccy, R, alpha=k * m * (1 - p) / 2, radius=R / 2, shadow=False)
+            layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
+            ImageDraw.Draw(layer).ellipse([ccx - R / 2, ccy - R / 2, ccx + R / 2, ccy + R / 2],
+                                          outline=GOLD + (int(230 * k * (1 - m * max(0.0, p))),), width=6)
+            base.alpha_composite(layer)
+            # 正／負指示條
+            by = CY + 250
+            layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
+            ImageDraw.Draw(layer).rounded_rectangle([360, by - 5, 720, by + 5], radius=5, fill=(255, 255, 255, int(110 * k)))
+            base.alpha_composite(layer)
+            on_pos = 1.0 if m < 0.01 else 0.5 + 0.5 * max(0.0, -p)    # 指標在哪一邊，那一邊就亮
+            on_neg = 1.0 if m < 0.01 else 0.5 + 0.5 * max(0.0, p)
+            pill(base, 200, by, "＋ 正", F(52, 800), NAVY, GOLD, scale=pop((t - w_pos + 0.05) / 0.4), alpha=k * on_pos)
+            pill(base, 880, by, "－ 負", F(52, 800), WHITE, (90, 92, 104), scale=pop((t - w_neg + 0.05) / 0.4),
+                 alpha=k * on_neg)
+            if m > 0.01:
+                mx = W / 2 + 180 * p
+                col = tuple(int(g + (b - g) * (p + 1) / 2) for g, b in zip(GOLD, (150, 152, 164)))
+                r = 26 * pop((t - (w_aff - 0.1)) / 0.4)
+                layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
+                ImageDraw.Draw(layer).ellipse([mx - r, by - r, mx + r, by + r], fill=col + (int(255 * k),),
+                                              outline=WHITE + (int(255 * k),), width=4)
+                base.alpha_composite(layer)
         if t >= t6 - 0.3:
             # 人體六到七成是水：人形從下往上注水；最後一句時分成兩個人，身體裡各有一個結晶（善念／惡念）
             k = ease((t - (t6 - 0.3)) / 0.4)
