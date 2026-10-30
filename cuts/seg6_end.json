@@ -1,7 +1,7 @@
 {
   "name": "段落 6｜片尾動畫（由 tools/endcard.py 依 cuts/endcard.json 產生）",
   "style": {
-    "shift_y": 40,
+    "shift_y": 60,
     "font": "Noto Sans TC",
     "size": 78,
     "outline": 4,
