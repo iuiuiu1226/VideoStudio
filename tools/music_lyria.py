@@ -24,6 +24,8 @@ MODEL = "lyria-3.5"
 HALLUCINATION = re.compile(r"字幕|Amara|訂閱|订阅|感謝觀看|感谢观看|謝謝觀看|MING PAO|"
                            r"thank(s)? (you )?for watching|subscribe|^\W*(thank you|thanks|you|bye)\W*$|"
                            r"优优独播|優優獨播|YoYo Television|right back|see you (next time|in the next)", re.I)
+# 製作人浮水印（例如 class01_science_3 在 15.7 秒有「…on the beat」）
+PRODUCER_TAG = re.compile(r"on the beat|on the track|beat by|prod(uced)? by", re.I)
 WIN, HOP = 8.0, 4.0  # 每 8 秒聽一段、每 4 秒往前滑
 
 
@@ -52,7 +54,8 @@ def check_vocals(path, max_voice=0.0, model=None):
             segs = list(model.transcribe(x, language=lang, vad_filter=False, beam_size=5,
                                          condition_on_previous_text=False, word_timestamps=True)[0])
             # 幻聽的特徵：第一個字可信度極低（< 0.2），後面整句是背出來的常見字幕（「Thanks for watching」「by bwd6」）
-            segs = [s for s in segs if s.words and s.words[0].probability >= 0.2]
+            # 但「XXX on the beat」這類製作人浮水印，第一個字（名字）也常常聽不清，所以符合 PRODUCER_TAG 的照樣算人聲
+            segs = [s for s in segs if s.words and (s.words[0].probability >= 0.2 or PRODUCER_TAG.search(s.text))]
             text = "".join(s.text for s in segs).strip()
             ns = min((s.no_speech_prob for s in segs), default=1.0)
             if len(re.sub(r"\W", "", text)) >= 2 and ns < 0.5 and not HALLUCINATION.search(text):
