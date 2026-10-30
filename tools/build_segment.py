@@ -122,6 +122,7 @@ def main():
     inputs, chains, labels, events, t0 = [], [], [], [], 0.0
     starts, xfades, durs = [], [], []  # 每段在成片的開始時間、與前一段的交叉淡化秒數、長度
     spans = []  # 人物畫面的時間區段（字卡不放標題、Logo）
+    fade_end = set()  # 這些區段的標題在結尾淡出（後面交叉淡化接片尾）
     n_in = 0
 
     for i, c in enumerate(spec["clips"]):
@@ -194,7 +195,11 @@ def main():
                 if b > a:
                     events.append((t0 + a, t0 + b, text, "Fx"))
             if c.get("no_overlay"):
-                pass  # 片尾等畫面不放標題、Logo
+                # 片尾等畫面不放標題、Logo；交叉淡化接進來時，標題在淡化開始前就淡出收掉，
+                # 不然淡化那一秒標題會跟片尾的 Logo 疊在一起
+                if spans and t0 < spans[-1][1]:
+                    spans[-1][1] = t0
+                    fade_end.add(len(spans) - 1)
             elif spans and t0 <= spans[-1][1] + 1e-6:
                 spans[-1][1] = t0 + dur  # 相接或交叉淡化重疊的段落合併，標題不會重複疊兩行
             else:
@@ -246,11 +251,12 @@ def main():
         return ";".join(steps)
 
     # 常駐標題（style.title）與小字（style.note，例如版權），只出現在人物畫面
-    for a, b in spans:
+    for i, (a, b) in enumerate(spans):
+        fad = r"{\fad(0,400)}" if i in fade_end else ""
         if style.get("title"):
-            events.append((a, b, style["title"], "Title"))
+            events.append((a, b, fad + style["title"], "Title"))
         if style.get("note"):
-            events.append((a, b, style["note"], "Note"))
+            events.append((a, b, fad + style["note"], "Note"))
 
     ass = os.path.join(tmp, "subs.ass")
     build_ass(events, ass, style)
