@@ -16,6 +16,7 @@
   overlay 是疊在畫面上的透明動畫檔（例如 qtrle 含 alpha 的 .mov），從該 clip 開頭對齊，疊在字幕底下。
   style.shift_y（或 clip 的 shift_y）把畫面往下移幾個像素，頂端用鏡像模糊補：IG Reels 上方介面（含模糊底）會蓋住畫面頂端約 270 px，
   標題放在那下面（y 288 起），人物頭頂太高的影片要讓出空間。
+  hold 是結尾停格的秒數（聲音補靜音），讓下一段的交叉淡化不會吃掉這段最後一個字。
   xfade 是跟前一段的交叉淡化秒數（畫面溶接）；前一段結尾要留至少這麼長的空白聲音（會被剪掉），
   這一段的聲音從自己的開頭照常播放，不會被淡掉。
 """
@@ -130,6 +131,10 @@ def main():
     for i, c in enumerate(spec["clips"]):
         raw = c["dur"] if "card" in c else c["out"] - c["in"]
         dur = round(raw * FPS) / FPS
+        # hold：結尾停格幾秒、聲音補靜音（下一段要交叉淡化、但這段講到最後一刻時，用來留出淡化的空白）
+        body = dur
+        hold = round(c.get("hold", 0.0) * FPS) / FPS
+        dur = body + hold
         xf = round(c.get("xfade", 0.0) * FPS) / FPS if i > 0 else 0.0
         t0 -= xf  # 交叉淡化：這段提早 xf 秒開始，跟前一段重疊
         if "card" in c:
@@ -212,18 +217,19 @@ def main():
                 spans[-1][1] = t0 + dur  # 相接或交叉淡化重疊的段落合併，標題不會重複疊兩行
             else:
                 spans.append([t0, t0 + dur])
+        hold_vf = f",tpad=stop_mode=clone:stop_duration={hold:.4f}" if hold > 0 else ""
         if c.get("overlay"):
             # 透明動畫疊加層（穿插的圖卡、標籤），對齊這段開頭
             inputs += ["-i", c["overlay"]]
             oi = n_in
             n_in += 1
-            chains.append(f"[{vi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,{vf}[b{i}]")
+            chains.append(f"[{vi}:v]fps={FPS},trim=duration={body:.4f},setpts=PTS-STARTPTS,{vf}{hold_vf}[b{i}]")
             chains.append(f"[{oi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,format=rgba[o{i}]")
             chains.append(f"[b{i}][o{i}]overlay=0:0:eof_action=pass,format=yuv420p[v{i}]")
         else:
-            chains.append(f"[{vi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,{vf}[v{i}]")
+            chains.append(f"[{vi}:v]fps={FPS},trim=duration={body:.4f},setpts=PTS-STARTPTS,{vf}{hold_vf}[v{i}]")
         chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
-                      f"apad,atrim=duration={dur:.4f},asetpts=PTS-STARTPTS,{af}[a{i}]")
+                      f"atrim=duration={body:.4f},apad,atrim=duration={dur:.4f},asetpts=PTS-STARTPTS,{af}[a{i}]")
         labels.append(f"[v{i}][a{i}]")
         starts.append(t0)
         xfades.append(xf)
