@@ -251,7 +251,7 @@ def overlays(args, F, out):
             # 連續幾段都有圖示時，底板一直留著；第一段淡入、最後一段淡出
             pa = 1.0
             if c.get("panel_in"):
-                pa *= ease((t - (at("水蒸氣", 0.5) - 0.25)) / 0.35)
+                pa *= ease((t - (at("panel", 0.25) - 0.25)) / 0.35)
             if c.get("panel_out"):
                 pa *= 1.0 - ease((t - (dur - 0.3)) / 0.3)
             panel(base, pa)
@@ -289,9 +289,7 @@ def overlays(args, F, out):
                 ti = at("冰塊", 4.0)
                 icon(base, "冰塊", POS["冰塊"], Y, pop((t - ti) / 0.45), ease((t - ti) / 0.3))
                 label(base, "冰塊", POS["冰塊"], LY, F, ease((t - ti) / 0.3))
-                ce = ease((t - at("液體變成固體", 5.4)) / 0.4)
-                if ce > 0.01:
-                    caption(base, "液體 → 固體", F, ce)
+                # 「液體 → 固體」字卡依使用者要求拿掉
             elif kind == "heat_back":          # 冰塊加溫變成水，再加溫變成水蒸氣
                 for kd in ("冰塊", "水", "水蒸氣"):
                     icon(base, kd, POS[kd], Y, 1.0, 1.0)

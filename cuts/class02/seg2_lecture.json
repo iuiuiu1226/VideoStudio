@@ -32,8 +32,7 @@
           "而且是真實存在的"
         ]
       ],
-      "shift_y": 90,
-      "xfade": 0.5
+      "shift_y": 90
     },
     {
       "id": "#B",
@@ -76,8 +75,7 @@
           "但它真實存在 對吧？"
         ]
       ],
-      "shift_y": 90,
-      "overlay": "work/class02_anim/ov_C.mov"
+      "shift_y": 90
     },
     {
       "id": "#D",
@@ -106,8 +104,7 @@
           "物質會變成能量"
         ]
       ],
-      "shift_y": 90,
-      "overlay": "work/class02_anim/ov_D.mov"
+      "shift_y": 90
     },
     {
       "id": "#E",
@@ -267,7 +264,7 @@
         ]
       ],
       "shift_y": 90,
-      "hold": 0.6
+      "hold": 1.0
     }
   ]
 }

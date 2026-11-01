@@ -1,5 +1,5 @@
 """產生課堂精華 VOL.02（IMG_8235／IMG_8236，講師：能量看不見，但真實存在）剪輯清單。
-開頭問題卡「看不見、摸不到的東西，就不存在嗎？」、講師段落（字幕下方小圖示）、結尾收尾卡、片尾。片段與重點字時間在 cuts/class02/clips.json；
+講師段落（字幕下方小圖示）直接開場，講完接片尾（v3 起開頭問題卡、結尾收尾卡依使用者要求拿掉）。片段與重點字時間在 cuts/class02/clips.json；
 動畫先跑 tools/class02_anim.py（輸出 work/class02_anim/，durations.json 記開頭與結尾的長度）。"""
 import json, os
 
@@ -9,7 +9,6 @@ STYLE = {"font": "Noto Sans TC", "size": 78, "outline": 4, "shadow": 1, "margin_
          "title": "BK 測試｜課堂精華", "note": "第七感人生智慧學"}
 SHIFT = 90          # 講師頭頂偏高，畫面往下移才不會被標題壓到（開頭、結尾動畫不移）
 clips = json.load(open(os.path.join(OUT, "clips.json"), encoding="utf-8"))
-dur = json.load(open(os.path.join("/home/user/VideoStudio", ANIM, "durations.json")))
 
 # 字幕（素材秒數）：起點用逐字時間，終點接下一句起點或片段結尾
 SUBS = {
@@ -39,11 +38,7 @@ def lecture_clip(cid):
 seg = lambda name, cl: json.dump({"name": name, "style": STYLE, "clips": cl},
                                  open(os.path.join(OUT, name.split("｜")[0] + ".json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 lect = [lecture_clip(k) for k in "ABCDEFGHI"]
-lect[0]["xfade"] = 0.5            # 開頭問題卡交叉淡化進講師
-lect[-1]["hold"] = 0.6            # 最後一句講完停格一下，留給下一段的交叉淡化
-seg("seg1_intro｜開頭問題：看不見、摸不到的東西，就不存在嗎？",
-    [{"id": "#intro", "src": f"{ANIM}/intro.mp4", "in": 0.0, "out": dur["intro"], "subs": []}])
+lect[-1]["hold"] = 1.0            # 最後一句講完停格，留給片尾的交叉淡化（1 秒）
 seg("seg2_lecture｜講師：能量看不見，但真實存在（IMG_8235、IMG_8236）", lect)
-seg("seg3_outro｜收尾：看不見，不代表不存在", [{"id": "#outro", "src": f"{ANIM}/outro.mp4", "in": 0.0, "out": dur["outro"], "subs": [], "xfade": 0.5}])
 seg("seg4_end｜片尾", [{"id": "#endcard", "src": "output/endcard.mp4", "in": 0.0, "out": 7.0, "no_overlay": True, "xfade": 1.0}])
 print("ok", sum(c["out"] - c["in"] for c in lect), "秒講師段落")

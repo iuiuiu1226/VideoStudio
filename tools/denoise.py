@@ -21,6 +21,9 @@
                   setup.sh 會下載 sh）；rnn_mix 是混入比例 0–1（全量會吃字，IMG_0632 實測 0.7 字完整）。
                   有設 rnnoise 時，噪音門改看 RNNoise 的輸出判斷有沒有人聲（側鏈噪音門）：
                   RNNoise 輸出的空檔幾乎全靜，輕聲的字不會被誤判成空檔壓掉
+  dereverb        去回音：值是房間的殘響時間 RT60（秒，例如 0.8；空曠的教室、木地板大窗的場地比較長）。
+                  在頻譜降噪之前做：估計每個時間點還在房間裡迴盪的「晚期殘響」（RT60 推算衰減、延遲 50ms），
+                  從頻譜扣掉（Lebart 法）；dereverb_floor_db 是最多扣幾 dB（預設 -15，扣太多聲音會變乾、變薄）
   gate_below_db / gate_threshold   噪音門門檻：比人聲 p90 低幾 dB，或直接給絕對值（0–1）
   gate_range_db / gate_ratio       噪音門最多壓低幾 dB、壓縮比
 講話較輕、起伏大的人，或素材本身已被壓縮過的，要用溫和設定，否則子音、輕聲的字會被一起削掉
@@ -64,6 +67,29 @@ def load(path, highpass=None):
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-vn", *af, "-ac", "1", "-ar", str(SR),
                           "-f", "s16le", "-"], capture_output=True, check=True).stdout
     return np.frombuffer(raw, np.int16).astype(np.float32) / 32768
+
+
+def dereverb(y, rt60, floor_db=-15.0, delay=0.05, n_fft=1024, hop=256):
+    """晚期殘響頻譜扣除（Lebart et al. 2001）：殘響能量照 RT60 指數衰減，
+    delay 秒前的能量乘上衰減量，就是現在還聽得到的殘響；從現在的頻譜扣掉，最多扣到 floor_db"""
+    from scipy.signal import istft, stft
+    _, _, X = stft(y, fs=SR, nperseg=n_fft, noverlap=n_fft - hop)
+    P = np.abs(X) ** 2
+    Ps = np.empty_like(P)        # 能量稍微平滑（一階遞迴），估計比較穩
+    acc = P[:, 0]
+    for i in range(P.shape[1]):
+        acc = 0.6 * acc + 0.4 * P[:, i]
+        Ps[:, i] = acc
+    nd = max(1, int(round(delay * SR / hop)))
+    late = np.zeros_like(P)
+    late[:, nd:] = 10 ** (-6 * delay / rt60) * Ps[:, :-nd]
+    g = np.sqrt(np.clip(1 - late / (P + 1e-12), 0, 1))
+    g = np.maximum(g, 10 ** (floor_db / 20))
+    k = np.ones(3) / 3           # 增益在時間上稍微平滑，避免「水聲」
+    g = np.apply_along_axis(lambda r: np.convolve(r, k, mode="same"), 1, g)
+    _, out = istft(X * g, fs=SR, nperseg=n_fft, noverlap=n_fft - hop)
+    out = out[:len(y)]
+    return np.pad(out, (0, len(y) - len(out))).astype(np.float32)
 
 
 def write_wav(path, y):
@@ -116,6 +142,8 @@ def main():
         c.update(conf.get("default", {}))
         c.update(conf.get(name, {}))
         a = load(src, c.get("highpass"))
+        if c.get("dereverb"):
+            a = dereverb(a, c["dereverb"], c.get("dereverb_floor_db", -15.0))
         n = SR // 50  # 20ms
         frames = a[: len(a) // n * n].reshape(-1, n)
         db = 20 * np.log10(np.sqrt((frames ** 2).mean(axis=1)) + 1e-9)
@@ -161,7 +189,7 @@ def main():
                         "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
                         "-c:a", "aac", "-b:a", "256k", "-ac", "2", dst], check=True)
         os.remove(wav)
-        print(f"{name}: 強度 {c['strength']}、nstd {c['nstd']}、高通 {c.get('highpass') or '-'}、"
+        print(f"{name}: 去回音 {c.get('dereverb') or '-'}、強度 {c['strength']}、nstd {c['nstd']}、高通 {c.get('highpass') or '-'}、"
               f"EQ {'有' if c.get('eq') else '-'}、RNNoise {c.get('rnnoise') or '-'}、最多壓 {c['gate_range_db']}dB，"
               f"噪音樣本 {len(quiet) / SR:.1f}s，音軌延遲 {off:.3f}s → {dst}")
 
