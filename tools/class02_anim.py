@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""課堂精華 VOL.02（能量看不見，但真實存在）的動畫：開頭問答卡、講師段落上的水三態小圖示、結尾揭曉答案。
+"""課堂精華 VOL.02（能量看不見，但真實存在）的動畫：開頭問題卡、講師段落上的小圖示、結尾收尾卡。
 
-開頭：「冰塊、水、水蒸氣，哪一個的能量最高？」三個選項依旁白跳出，下方小字「答案在影片最後」
-講師段落：字幕下方的透明疊加層（ov_<片段>.mov），冰塊／水／水蒸氣固定在同一排位置（左中右），
-  講到降溫、加溫時箭頭依序出現，畫面上的圖會延續到下一段，像同一張圖慢慢長出來
-結尾：三個選項再出現，「水蒸氣」亮金色打勾，「看不見的，能量反而最高」「你答對了嗎？」
+開頭：「看不見、摸不到的東西，就不存在嗎？」（女聲旁白，深藍底、空氣中淡淡漂浮的微粒）
+講師段落：字幕下方的透明疊加層（ov_<片段>.mov）：水蒸氣看不到但存在、能量⇄物質、水降溫變水／變冰、加溫變回去；
+  冰塊／水／水蒸氣固定在同一排位置（左中右），畫面上的圖會延續到下一段，像同一張圖慢慢長出來。
+  水換狀態只標「看不見 → 看得見」「液體 → 固體」（水換狀態不是能量變物質，不畫成那樣）；
+  講師講「能量跟物質互相轉化」時另外畫「能量 ⇄ 物質」，不配水的圖
+結尾：「看不見，不代表不存在。」
 開頭與結尾的文字就是旁白內容，所以這兩段不另外上字幕（字幕不重複畫面上的大字）。
+（v1 的「冰塊、水、水蒸氣，哪一個能量最高？」問答與揭曉，使用者決定先跳過，避免爭議）
 
 用法：
-  python3 tools/class02_anim.py --vo work/class02_vo --font <NotoSansTC.ttf> --out work/class02_anim [--only intro|reveal|overlay] [--preview 1,2.5]
+  python3 tools/class02_anim.py --vo work/class02_vo --font <NotoSansTC.ttf> --out work/class02_anim [--only intro|outro|overlay] [--preview 1,2.5]
 """
 import argparse
 import json
@@ -25,7 +28,7 @@ import life03_anim as L  # noqa: E402  共用深藍底、文字、膠囊標籤�
 from life03_anim import W, H, NAVY, GOLD, WHITE, BLUE, ease, pop, layer_text, pill, vignette_bg  # noqa: E402
 
 TEMPO = 1.12                      # 旁白加快（同課堂精華 VOL.01）
-SPLIT = 5.1                       # 配音檔裡「最高？」與「答案是」之間的停頓
+SPLIT = 4.4                       # 配音檔裡「就不存在嗎？」與「看不見，不代表不存在」之間的停頓
 HEAD = 0.3
 ICE_C = (196, 232, 248)
 STEAM_C = (226, 234, 242)
@@ -168,67 +171,61 @@ def word_time(words, txt, default):
 
 # ---------- 段落 ----------
 
+def particles(base, t, a=1.0, n=46):
+    """空氣中淡淡漂浮的微粒（看不見的東西其實一直都在）"""
+    rng = np.random.default_rng(7)
+    xs, ys, rs, sp = rng.uniform(80, W - 80, n), rng.uniform(300, 1700, n), rng.uniform(3, 8, n), rng.uniform(12, 30, n)
+    lay = _layer()
+    d = ImageDraw.Draw(lay)
+    for x, y0, r, v, ph in zip(xs, ys, rs, sp, rng.uniform(0, 6.28, n)):
+        y = 300 + (y0 - 300 - v * t) % 1400
+        xx = x + 14 * math.sin(t * 0.7 + ph)
+        al = int(255 * a * (0.18 + 0.12 * math.sin(t * 1.3 + ph)))
+        d.ellipse([xx - r, y - r, xx + r, y + r], fill=(200, 225, 255, max(0, al)))
+    base.alpha_composite(lay.filter(ImageFilter.GaussianBlur(1.5)))
+
+
 def intro(args, F, out):
     (y, words), _ = load_vo(args.vo)
-    total = HEAD + len(y) / 48000 + 1.1          # 唸完多停一下讓觀眾想一想
+    total = HEAD + len(y) / 48000 + 0.9          # 問完停一下，再交叉淡化進講師
     audio = np.zeros(int(total * 48000), np.float32)
     audio[int(HEAD * 48000):int(HEAD * 48000) + len(y)] = y
-    t_ice, t_water = HEAD + word_time(words, "冰", 0.1), HEAD + word_time(words, "水,", 0.9)
-    t_steam = HEAD + word_time(words, "蒸", 1.8) - 0.25
-    t_q = HEAD + word_time(words, "哪", 2.6)
-    t_end = HEAD + len(y) / 48000
+    t_q = HEAD + word_time(words, "就", 2.2)
 
     def frame(t):
         base = vignette_bg(t).convert("RGBA")
-        e = ease((t - 0.05) / 0.4)
-        layer_text(base, (W / 2, 640), "冰塊、水、水蒸氣", F(84, 900), WHITE, alpha=e, stroke=4)
+        particles(base, t, ease(t / 0.6))
+        e = ease((t - 0.05) / 0.45)
+        layer_text(base, (W / 2, 780), "看不見、摸不到的東西", F(80, 900), WHITE, alpha=e, stroke=4)
         if t >= t_q - 0.1:
             s = pop((t - t_q + 0.1) / 0.45)
-            layer_text(base, (W / 2, 770), "哪一個能量最高？", F(max(8, int(104 * s)), 900), GOLD, stroke=5)
-        for kind, ts in (("冰塊", t_ice), ("水", t_water), ("水蒸氣", t_steam)):
-            if t >= ts - 0.05:
-                card(base, kind, CARD_X[kind], CARD_Y, F, a=ease((t - ts + 0.05) / 0.3),
-                     s=pop((t - ts + 0.05) / 0.4))
-        if t >= t_end - 0.2:
-            k = ease((t - (t_end - 0.2)) / 0.4)
-            layer_text(base, (W / 2, 1250), "答案在影片最後", F(46, 700), WHITE, alpha=k * (0.75 + 0.25 * math.sin(t * 5)))
+            layer_text(base, (W / 2, 930), "就不存在嗎？", F(max(8, int(118 * s)), 900), GOLD, stroke=5)
         return base
 
     L.render(os.path.join(out, "intro.mp4"), frame, total, audio)
     return total
 
 
-def reveal(args, F, out):
+def outro(args, F, out):
     _, (y, words) = load_vo(args.vo)
-    head = 0.25
-    total = head + len(y) / 48000 + 1.6           # 「你答對了嗎？」後多停一下，再交叉淡化進片尾
+    head = 0.35
+    total = head + len(y) / 48000 + 1.6           # 講完多停一下，再交叉淡化進片尾
     audio = np.zeros(int(total * 48000), np.float32)
     audio[int(head * 48000):int(head * 48000) + len(y)] = y
-    t_ans = head + word_time(words, "答", 0.0)
-    t_steam = head + word_time(words, "水", 0.8)
-    t_see = head + word_time(words, "看", 1.6)
-    t_you = head + word_time(words, "你", 4.4)
+    t1 = head + word_time(words, "看", 0.2)
+    t2 = head + word_time(words, "代", 1.2) - 0.25
 
     def frame(t):
         base = vignette_bg(t + 7).convert("RGBA")
-        e = ease(t / 0.35)
-        hi = ease((t - t_steam) / 0.35)
-        for kind in ("冰塊", "水", "水蒸氣"):
-            card(base, kind, CARD_X[kind], CARD_Y, F, a=e,
-                 hi=hi if kind == "水蒸氣" else 0.0, dim=0.0 if kind == "水蒸氣" else hi)
-        if t >= t_ans - 0.1:
-            layer_text(base, (W / 2, 680), "答案是", F(72, 900), WHITE, alpha=ease((t - t_ans + 0.1) / 0.3), stroke=4)
-        if t >= t_steam - 0.05:
-            s = pop((t - t_steam + 0.05) / 0.45)
-            layer_text(base, (W / 2, 800), "水蒸氣", F(max(8, int(120 * s)), 900), GOLD, stroke=5)
-        if t >= t_see - 0.1:
-            layer_text(base, (W / 2, 1290), "看不見的，能量反而最高", F(60, 800), WHITE, alpha=ease((t - t_see + 0.1) / 0.35), stroke=4)
-        if t >= t_you - 0.1:
-            s = pop((t - t_you + 0.1) / 0.45)
-            layer_text(base, (W / 2, 1420), "你答對了嗎？", F(max(8, int(80 * s)), 900), GOLD, stroke=5)
+        particles(base, t + 20, ease(t / 0.5))
+        if t >= t1 - 0.1:
+            layer_text(base, (W / 2, 800), "看不見，", F(96, 900), WHITE, alpha=ease((t - t1 + 0.1) / 0.35), stroke=4)
+        if t >= t2 - 0.05:
+            s = pop((t - t2 + 0.05) / 0.45)
+            layer_text(base, (W / 2, 950), "不代表不存在", F(max(8, int(124 * s)), 900), GOLD, stroke=5)
         return base
 
-    L.render(os.path.join(out, "reveal.mp4"), frame, total, audio)
+    L.render(os.path.join(out, "outro.mp4"), frame, total, audio)
     return total
 
 
@@ -273,16 +270,16 @@ def overlays(args, F, out):
                 pill(base, 780, Y, "物質", F(54, 800), WHITE, (70, 96, 136), scale=pop((t - 0.15) / 0.4), alpha=e)
                 arrow(base, 410, 670, Y - 24, ease((t - at("能量會變成物質", 2.0)) / 0.45), F)
                 arrow(base, 670, 410, Y + 24, ease((t - at("物質會變成能量", 4.0)) / 0.45), F)
-            elif kind == "cool_to_water":      # 降到零度，空氣中的水出現：能量變成物質
+            elif kind == "cool_to_water":      # 降到零度，空氣中的水出現：看不見的水蒸氣變成看得見的水
                 icon(base, "水蒸氣", POS["水蒸氣"], Y, 1.0, ease(t / 0.3))
                 label(base, "水蒸氣", POS["水蒸氣"], LY, F, ease(t / 0.3))
                 arrow(base, POS["水蒸氣"] - 95, POS["水"] + 95, Y, ease((t - at("降溫", 1.4)) / 0.6), F, "降溫")
                 tw = at("水會不會出現", 4.2)
                 icon(base, "水", POS["水"], Y, pop((t - tw) / 0.45), ease((t - tw) / 0.3))
                 label(base, "水", POS["水"], LY, F, ease((t - tw) / 0.3))
-                ce = ease((t - at("從能量變成物質", 7.3)) / 0.4)
+                ce = ease((t - at("看得見", 5.0)) / 0.4)
                 if ce > 0.01:
-                    caption(base, "能量 → 物質", F, ce)
+                    caption(base, "看不見 → 看得見", F, ce)
             elif kind == "cool_to_ice":        # 零下 20 度，水變冰塊：液體變固體
                 for kd in ("水蒸氣", "水"):
                     icon(base, kd, POS[kd], Y, 1.0, 0.45 if kd == "水蒸氣" else 1.0)
@@ -301,17 +298,16 @@ def overlays(args, F, out):
                     label(base, kd, POS[kd], LY, F)
                 arrow(base, POS["冰塊"] + 95, POS["水"] - 95, Y, ease((t - at("加溫", 0.6)) / 0.5), F, "加溫", color=(240, 140, 90))
                 arrow(base, POS["水"] + 95, POS["水蒸氣"] - 95, Y, ease((t - at("再加溫", 2.6)) / 0.5), F, "加溫", color=(240, 140, 90))
-            elif kind == "cycle":              # 能量跟物質互相轉化
-                for kd in ("冰塊", "水", "水蒸氣"):
-                    icon(base, kd, POS[kd], Y, 1.0, 1.0)
-                    label(base, kd, POS[kd], LY, F)
+            elif kind == "energy_cycle":       # 能量跟物質互相存在、互相轉化（另外畫，不配水的圖）
+                e = ease(t / 0.3)
+                pill(base, 300, Y, "能量", F(54, 800), NAVY, GOLD, scale=pop(t / 0.4), alpha=e)
+                pill(base, 780, Y, "物質", F(54, 800), WHITE, (70, 96, 136), scale=pop((t - 0.15) / 0.4), alpha=e)
                 p = ease((t - at("互相", 3.0)) / 0.5)
-                for xa, xb in ((POS["冰塊"] + 95, POS["水"] - 95), (POS["水"] + 95, POS["水蒸氣"] - 95)):
-                    arrow(base, xa, xb, Y - 20, p, F, color=(240, 140, 90))
-                    arrow(base, xb, xa, Y + 20, p, F, color=(120, 190, 240))
+                arrow(base, 410, 670, Y - 24, p, F)
+                arrow(base, 670, 410, Y + 24, p, F)
                 ce = ease((t - at("轉化", 5.0)) / 0.4)
                 if ce > 0.01:
-                    caption(base, "能量 ⇄ 物質　互相轉化", F, ce)
+                    caption(base, "互相轉化", F, ce)
             if c.get("fade_out", True):     # 片段最後 0.25 秒圖示淡出（下一段若是同一排圖會再接上）
                 out_k = 1.0 - ease((t - (dur - 0.25)) / 0.25)
                 if out_k < 1.0:
@@ -329,7 +325,7 @@ def main():
     ap.add_argument("--vo", required=True)
     ap.add_argument("--font", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--only", choices=["intro", "reveal", "overlay"])
+    ap.add_argument("--only", choices=["intro", "outro", "overlay"])
     ap.add_argument("--preview", default="")
     args = ap.parse_args()
     L.PREVIEW[:] = [float(x) for x in args.preview.split(",") if x]
@@ -339,8 +335,9 @@ def main():
     info = json.load(open(info_path)) if os.path.exists(info_path) else {}
     if args.only in (None, "intro"):
         info["intro"] = round(intro(args, F, args.out), 3)
-    if args.only in (None, "reveal"):
-        info["reveal"] = round(reveal(args, F, args.out), 3)
+    info.pop("reveal", None)
+    if args.only in (None, "outro"):
+        info["outro"] = round(outro(args, F, args.out), 3)
     if args.only in (None, "overlay"):
         overlays(args, F, args.out)
     json.dump(info, open(info_path, "w"), indent=2)

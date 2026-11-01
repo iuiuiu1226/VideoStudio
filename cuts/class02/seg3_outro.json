@@ -1,5 +1,5 @@
 {
-  "name": "seg3_reveal｜揭曉：答案是水蒸氣",
+  "name": "seg3_outro｜收尾：看不見，不代表不存在",
   "style": {
     "font": "Noto Sans TC",
     "size": 78,
@@ -11,10 +11,10 @@
   },
   "clips": [
     {
-      "id": "#reveal",
-      "src": "work/class02_anim/reveal.mp4",
+      "id": "#outro",
+      "src": "work/class02_anim/outro.mp4",
       "in": 0.0,
-      "out": 7.332,
+      "out": 4.738,
       "subs": [],
       "xfade": 0.5
     }

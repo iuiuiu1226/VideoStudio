@@ -1,5 +1,5 @@
 {
-  "name": "seg1_intro｜開頭問答：冰塊、水、水蒸氣，哪一個能量最高？",
+  "name": "seg1_intro｜開頭問題：看不見、摸不到的東西，就不存在嗎？",
   "style": {
     "font": "Noto Sans TC",
     "size": 78,
@@ -14,7 +14,7 @@
       "id": "#intro",
       "src": "work/class02_anim/intro.mp4",
       "in": 0.0,
-      "out": 5.954,
+      "out": 5.129,
       "subs": []
     }
   ]

@@ -1,5 +1,5 @@
 """產生課堂精華 VOL.02（IMG_8235／IMG_8236，講師：能量看不見，但真實存在）剪輯清單。
-開頭問答卡、講師段落（字幕下方水三態小圖示）、結尾揭曉、片尾。片段與重點字時間在 cuts/class02/clips.json；
+開頭問題卡「看不見、摸不到的東西，就不存在嗎？」、講師段落（字幕下方小圖示）、結尾收尾卡、片尾。片段與重點字時間在 cuts/class02/clips.json；
 動畫先跑 tools/class02_anim.py（輸出 work/class02_anim/，durations.json 記開頭與結尾的長度）。"""
 import json, os
 
@@ -17,7 +17,8 @@ SUBS = {
     "B": [(15.03, "比如說現在"), (15.62, "請問空氣中現在有水嗎？")],
     "C": [(19.95, "有！水蒸氣"), (22.08, "你看不到啊"), (22.95, "但它真實存在 對吧？")],
     "D": [(0.00, "物質跟能量"), (0.72, "是百分百有關係的"), (1.88, "因為能量會變成物質"), (4.02, "物質會變成能量")],
-    "E": [(16.08, "當冷氣開始降溫"), (17.85, "降到零度"), (18.75, "請問空氣中的水"), (20.60, "會不會出現？"), (22.80, "它從能量變成物質")],
+    # 「它從能量變成物質」拿掉：水蒸氣凝結成水是物質換狀態，不是能量變成物質
+    "E": [(16.08, "當冷氣開始降溫"), (17.85, "降到零度"), (18.75, "請問空氣中的水"), (20.60, "會不會出現？")],
     "F": [(26.95, "再降到零下 20 度"), (28.80, "水會變什麼？"), (30.75, "冰塊"), (31.50, "它從液體變成固體了")],
     "G": [(52.42, "冰塊加溫變成水"), (54.80, "再加溫變成水蒸氣")],
     "H": [(85.85, "所以能量跟物質"), (87.25, "是絕對互相存在的"), (89.80, "因為它們就是"), (90.50, "一個轉化的過程")],
@@ -38,11 +39,11 @@ def lecture_clip(cid):
 seg = lambda name, cl: json.dump({"name": name, "style": STYLE, "clips": cl},
                                  open(os.path.join(OUT, name.split("｜")[0] + ".json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 lect = [lecture_clip(k) for k in "ABCDEFGHI"]
-lect[0]["xfade"] = 0.5            # 開頭問答卡交叉淡化進講師
+lect[0]["xfade"] = 0.5            # 開頭問題卡交叉淡化進講師
 lect[-1]["hold"] = 0.6            # 最後一句講完停格一下，留給下一段的交叉淡化
-seg("seg1_intro｜開頭問答：冰塊、水、水蒸氣，哪一個能量最高？",
+seg("seg1_intro｜開頭問題：看不見、摸不到的東西，就不存在嗎？",
     [{"id": "#intro", "src": f"{ANIM}/intro.mp4", "in": 0.0, "out": dur["intro"], "subs": []}])
 seg("seg2_lecture｜講師：能量看不見，但真實存在（IMG_8235、IMG_8236）", lect)
-seg("seg3_reveal｜揭曉：答案是水蒸氣", [{"id": "#reveal", "src": f"{ANIM}/reveal.mp4", "in": 0.0, "out": dur["reveal"], "subs": [], "xfade": 0.5}])
+seg("seg3_outro｜收尾：看不見，不代表不存在", [{"id": "#outro", "src": f"{ANIM}/outro.mp4", "in": 0.0, "out": dur["outro"], "subs": [], "xfade": 0.5}])
 seg("seg4_end｜片尾", [{"id": "#endcard", "src": "output/endcard.mp4", "in": 0.0, "out": 7.0, "no_overlay": True, "xfade": 1.0}])
 print("ok", sum(c["out"] - c["in"] for c in lect), "秒講師段落")
