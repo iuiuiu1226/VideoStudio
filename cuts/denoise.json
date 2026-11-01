@@ -58,31 +58,41 @@
     "gate_range_db": 10
   },
   "IMG_8235.MOV": {
-    "dereverb": 3.0,
-    "dereverb_floor_db": -35,
+    "highpass": 150,
+    "dereverb_erb": {
+      "rt_lo": 1.5,
+      "rt_hi": 0.8,
+      "alpha": 1.5,
+      "floor_db": -25,
+      "delay": 0.03
+    },
     "strength": 0.9,
     "nstd": 2.0,
-    "highpass": 100,
     "rnnoise": "sh",
-    "rnn_mix": 0.6,
-    "eq": "equalizer=f=500:t=q:w=1.2:g=-5,equalizer=f=250:t=q:w=1.0:g=-2,equalizer=f=3500:t=q:w=1.0:g=4",
-    "gate_below_db": 18,
-    "gate_range_db": 28,
-    "dereverb_delay": 0.03,
-    "gate_release": 100
+    "rnn_mix": 0.5,
+    "eq": "equalizer=f=135:t=q:w=5:g=-3,equalizer=f=193:t=q:w=6:g=-5,equalizer=f=217:t=q:w=6:g=-5,equalizer=f=375:t=q:w=6:g=-4,equalizer=f=691:t=q:w=8:g=-4,equalizer=f=350:t=q:w=0.8:g=-5,equalizer=f=180:t=q:w=1.0:g=-2,equalizer=f=3000:t=q:w=1.0:g=5,highshelf=f=6000:g=3",
+    "gate_key_hf": true,
+    "gate_below_db": 20,
+    "gate_range_db": 30,
+    "gate_release": 110
   },
   "IMG_8236.MOV": {
-    "dereverb": 3.0,
-    "dereverb_floor_db": -35,
+    "highpass": 150,
+    "dereverb_erb": {
+      "rt_lo": 1.5,
+      "rt_hi": 0.8,
+      "alpha": 1.5,
+      "floor_db": -25,
+      "delay": 0.03
+    },
     "strength": 0.9,
     "nstd": 2.0,
-    "highpass": 100,
     "rnnoise": "sh",
-    "rnn_mix": 0.6,
-    "eq": "equalizer=f=500:t=q:w=1.2:g=-5,equalizer=f=250:t=q:w=1.0:g=-2,equalizer=f=3500:t=q:w=1.0:g=4",
-    "gate_below_db": 18,
-    "gate_range_db": 28,
-    "dereverb_delay": 0.03,
-    "gate_release": 100
+    "rnn_mix": 0.5,
+    "eq": "equalizer=f=135:t=q:w=5:g=-3,equalizer=f=193:t=q:w=6:g=-5,equalizer=f=217:t=q:w=6:g=-5,equalizer=f=375:t=q:w=6:g=-4,equalizer=f=691:t=q:w=8:g=-4,equalizer=f=350:t=q:w=0.8:g=-5,equalizer=f=180:t=q:w=1.0:g=-2,equalizer=f=3000:t=q:w=1.0:g=5,highshelf=f=6000:g=3",
+    "gate_key_hf": true,
+    "gate_below_db": 20,
+    "gate_range_db": 30,
+    "gate_release": 110
   }
 }

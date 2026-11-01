@@ -27,8 +27,14 @@
                   在頻譜降噪之前做：估計每個時間點還在房間裡迴盪的「晚期殘響」（RT60 推算衰減、延遲 50ms），
                   從頻譜扣掉（Lebart 法）；dereverb_floor_db 是最多扣幾 dB（預設 -15，扣太多聲音會變乾、變薄）；
                   dereverb_delay 是從幾秒後開始算殘響（預設 0.05，回音很重時用 0.03 扣得更早）
+  dereverb_erb    去回音（平滑版，建議優先用）：跟 dereverb 同原理，但改在 40 個聽覺頻帶（ERB）上估計、增益再平滑攤回每個頻率，
+                  不會把諧波切成一塊一塊（逐頻率扣太猛會有「隧道／水聲」，聽起來反而像回音）。值是設定物件：
+                  rt_lo／rt_hi 低頻（f_lo 500 Hz 以下）／高頻（f_hi 2 kHz 以上）的殘響秒數（教室低頻拖比較長）、
+                  alpha 扣除倍數（>1 扣得更多）、floor_db 最多扣幾 dB（功率）、delay 幾秒後開始算殘響
   gate_below_db / gate_threshold   噪音門門檻：比人聲 p90 低幾 dB，或直接給絕對值（0–1）
   gate_range_db / gate_ratio       噪音門最多壓低幾 dB、壓縮比
+  gate_key_hf     噪音門只看 1.5–6 kHz 判斷有沒有在講話（true）：低頻的回音尾巴拖很長、高頻很快就停，
+                  看高頻判斷，字講完門就關，低頻嗡嗡的尾巴不會撐著門
   gate_release    噪音門放開後多快關回去（毫秒，預設 250；回音重時用 100，字和字之間的回音尾巴會收得比較乾淨）
 講話較輕、起伏大的人，或素材本身已被壓縮過的，要用溫和設定，否則子音、輕聲的字會被一起削掉
 （輸出後請轉錄比對，並檢查 4–8 kHz 有沒有被削掉）。
@@ -127,6 +133,50 @@ def dereverb(y, rt60, floor_db=-15.0, delay=0.05, n_fft=1024, hop=256):
     return np.pad(out, (0, len(y) - len(out))).astype(np.float32)
 
 
+def erb_fb(freqs, n=40, fmin=50.0, fmax=20000.0):
+    """三角形 ERB 濾波器組（n 個頻帶 × 每個 FFT 頻率）"""
+    e = lambda f: 21.4 * np.log10(1 + 0.00437 * f)
+    ie = lambda x: (10 ** (x / 21.4) - 1) / 0.00437
+    c = ie(np.linspace(e(fmin), e(fmax), n + 2))
+    W = np.zeros((n, len(freqs)))
+    for b in range(n):
+        lo, mid, hi = c[b], c[b + 1], c[b + 2]
+        W[b] = np.clip(np.minimum((freqs - lo) / (mid - lo), (hi - freqs) / (hi - mid)), 0, None)
+    W[0, freqs < c[1]] = 1
+    W[-1, freqs > c[-2]] = 1
+    return W, c[1:-1]
+
+
+def dereverb_erb(y, rt_lo=1.2, rt_hi=0.7, f_lo=500, f_hi=2000, floor_db=-20.0, alpha=1.0, delay=0.04,
+                 n_fft=1536, hop=384, smooth=0.5, bands=40):
+    """頻帶版晚期殘響扣除：在 ERB 頻帶上做 Lebart 估計（低頻、高頻各自的 RT60），
+    增益往上立刻跟（字頭不被吃）、往下平滑，最後用濾波器組平滑攤回每個頻率"""
+    from scipy.signal import istft, stft
+    f, _, X = stft(y, fs=SR, nperseg=n_fft, noverlap=n_fft - hop)
+    W, fc = erb_fb(f, bands)
+    P = W @ (np.abs(X) ** 2)
+    w = np.clip((np.log(f_hi) - np.log(np.maximum(fc, 1))) / (np.log(f_hi) - np.log(f_lo)), 0, 1)
+    rt = rt_hi + (rt_lo - rt_hi) * w
+    Ps = np.empty_like(P)
+    acc = P[:, 0]
+    for i in range(P.shape[1]):
+        acc = 0.6 * acc + 0.4 * P[:, i]
+        Ps[:, i] = acc
+    nd = max(1, int(round(delay * SR / hop)))
+    late = np.zeros_like(P)
+    late[:, nd:] = (10 ** (-6 * delay / rt))[:, None] * Ps[:, :-nd]
+    G = np.clip(1 - alpha * late / (P + 1e-12), 10 ** (floor_db / 10), 1)
+    Gs = np.empty_like(G)
+    acc = G[:, 0]
+    for i in range(G.shape[1]):
+        acc = np.where(G[:, i] > acc, G[:, i], smooth * acc + (1 - smooth) * G[:, i])
+        Gs[:, i] = acc
+    gbin = (W.T @ np.sqrt(Gs)) / (W.T.sum(axis=1, keepdims=True) + 1e-9)
+    _, out = istft(X * gbin, fs=SR, nperseg=n_fft, noverlap=n_fft - hop)
+    out = out[:len(y)]
+    return np.pad(out, (0, len(y) - len(out))).astype(np.float32)
+
+
 def write_wav(path, y):
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
@@ -181,6 +231,8 @@ def main():
             a = wpe(a, int(c["wpe"]), iters=int(c.get("wpe_iters", 3)))
         if c.get("dereverb"):
             a = dereverb(a, c["dereverb"], c.get("dereverb_floor_db", -15.0), delay=c.get("dereverb_delay", 0.05))
+        if c.get("dereverb_erb"):
+            a = dereverb_erb(a, **c["dereverb_erb"])
         n = SR // 50  # 20ms
         frames = a[: len(a) // n * n].reshape(-1, n)
         db = 20 * np.log10(np.sqrt((frames ** 2).mean(axis=1)) + 1e-9)
@@ -197,6 +249,8 @@ def main():
             model = rnn_model(c["rnnoise"])
             key = ffx(a, f"arnndn=m={model}")  # 全量 RNNoise 只拿來判斷哪裡有人聲
             y = ffx(y, f"arnndn=m={model}:mix={c.get('rnn_mix', 1.0)}")
+            if c.get("gate_key_hf"):
+                key = ffx(key, "highpass=f=1500:poles=2,lowpass=f=6000:poles=2")
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
             wav = tf.name
         write_wav(wav, y)
@@ -226,7 +280,7 @@ def main():
                         "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
                         "-c:a", "aac", "-b:a", "256k", "-ac", "2", dst], check=True)
         os.remove(wav)
-        print(f"{name}: WPE {c.get('wpe') or '-'}、去回音 {c.get('dereverb') or '-'}、強度 {c['strength']}、nstd {c['nstd']}、高通 {c.get('highpass') or '-'}、"
+        print(f"{name}: WPE {c.get('wpe') or '-'}、去回音 {c.get('dereverb') or c.get('dereverb_erb') or '-'}、強度 {c['strength']}、nstd {c['nstd']}、高通 {c.get('highpass') or '-'}、"
               f"EQ {'有' if c.get('eq') else '-'}、RNNoise {c.get('rnnoise') or '-'}、最多壓 {c['gate_range_db']}dB，"
               f"噪音樣本 {len(quiet) / SR:.1f}s，音軌延遲 {off:.3f}s → {dst}")
 

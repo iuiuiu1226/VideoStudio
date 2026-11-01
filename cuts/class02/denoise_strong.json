@@ -1,0 +1,40 @@
+{
+  "IMG_8235.MOV": {
+    "highpass": 150,
+    "dereverb_erb": {
+      "rt_lo": 1.8,
+      "rt_hi": 0.9,
+      "alpha": 2.2,
+      "floor_db": -30,
+      "delay": 0.03
+    },
+    "strength": 0.9,
+    "nstd": 2.0,
+    "rnnoise": "sh",
+    "rnn_mix": 0.5,
+    "eq": "equalizer=f=135:t=q:w=5:g=-3,equalizer=f=193:t=q:w=6:g=-5,equalizer=f=217:t=q:w=6:g=-5,equalizer=f=375:t=q:w=6:g=-4,equalizer=f=691:t=q:w=8:g=-4,equalizer=f=350:t=q:w=0.8:g=-5,equalizer=f=180:t=q:w=1.0:g=-2,equalizer=f=3000:t=q:w=1.0:g=5,highshelf=f=6000:g=3",
+    "gate_key_hf": true,
+    "gate_below_db": 17,
+    "gate_range_db": 34,
+    "gate_release": 90
+  },
+  "IMG_8236.MOV": {
+    "highpass": 150,
+    "dereverb_erb": {
+      "rt_lo": 1.8,
+      "rt_hi": 0.9,
+      "alpha": 2.2,
+      "floor_db": -30,
+      "delay": 0.03
+    },
+    "strength": 0.9,
+    "nstd": 2.0,
+    "rnnoise": "sh",
+    "rnn_mix": 0.5,
+    "eq": "equalizer=f=135:t=q:w=5:g=-3,equalizer=f=193:t=q:w=6:g=-5,equalizer=f=217:t=q:w=6:g=-5,equalizer=f=375:t=q:w=6:g=-4,equalizer=f=691:t=q:w=8:g=-4,equalizer=f=350:t=q:w=0.8:g=-5,equalizer=f=180:t=q:w=1.0:g=-2,equalizer=f=3000:t=q:w=1.0:g=5,highshelf=f=6000:g=3",
+    "gate_key_hf": true,
+    "gate_below_db": 17,
+    "gate_range_db": 34,
+    "gate_release": 90
+  }
+}
