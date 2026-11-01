@@ -58,27 +58,31 @@
     "gate_range_db": 10
   },
   "IMG_8235.MOV": {
-    "dereverb": 1.5,
-    "dereverb_floor_db": -25,
+    "dereverb": 3.0,
+    "dereverb_floor_db": -35,
     "strength": 0.9,
     "nstd": 2.0,
     "highpass": 100,
     "rnnoise": "sh",
     "rnn_mix": 0.6,
     "eq": "equalizer=f=500:t=q:w=1.2:g=-5,equalizer=f=250:t=q:w=1.0:g=-2,equalizer=f=3500:t=q:w=1.0:g=4",
-    "gate_below_db": 22,
-    "gate_range_db": 22
+    "gate_below_db": 18,
+    "gate_range_db": 28,
+    "dereverb_delay": 0.03,
+    "gate_release": 100
   },
   "IMG_8236.MOV": {
-    "dereverb": 1.5,
-    "dereverb_floor_db": -25,
+    "dereverb": 3.0,
+    "dereverb_floor_db": -35,
     "strength": 0.9,
     "nstd": 2.0,
     "highpass": 100,
     "rnnoise": "sh",
     "rnn_mix": 0.6,
     "eq": "equalizer=f=500:t=q:w=1.2:g=-5,equalizer=f=250:t=q:w=1.0:g=-2,equalizer=f=3500:t=q:w=1.0:g=4",
-    "gate_below_db": 22,
-    "gate_range_db": 22
+    "gate_below_db": 18,
+    "gate_range_db": 28,
+    "dereverb_delay": 0.03,
+    "gate_release": 100
   }
 }

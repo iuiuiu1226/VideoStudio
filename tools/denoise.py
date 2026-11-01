@@ -21,11 +21,15 @@
                   setup.sh 會下載 sh）；rnn_mix 是混入比例 0–1（全量會吃字，IMG_0632 實測 0.7 字完整）。
                   有設 rnnoise 時，噪音門改看 RNNoise 的輸出判斷有沒有人聲（側鏈噪音門）：
                   RNNoise 輸出的空檔幾乎全靜，輕聲的字不會被誤判成空檔壓掉
+  wpe             去回音（較強）：WPE 線性預測去殘響，值是預測長度（格數，每格 8ms，例如 20＝看前 160ms），
+                  在 dereverb 之前做；回音很重的場地（空曠教室）用。wpe_iters 迭代次數（預設 3）
   dereverb        去回音：值是房間的殘響時間 RT60（秒，例如 0.8；空曠的教室、木地板大窗的場地比較長）。
                   在頻譜降噪之前做：估計每個時間點還在房間裡迴盪的「晚期殘響」（RT60 推算衰減、延遲 50ms），
-                  從頻譜扣掉（Lebart 法）；dereverb_floor_db 是最多扣幾 dB（預設 -15，扣太多聲音會變乾、變薄）
+                  從頻譜扣掉（Lebart 法）；dereverb_floor_db 是最多扣幾 dB（預設 -15，扣太多聲音會變乾、變薄）；
+                  dereverb_delay 是從幾秒後開始算殘響（預設 0.05，回音很重時用 0.03 扣得更早）
   gate_below_db / gate_threshold   噪音門門檻：比人聲 p90 低幾 dB，或直接給絕對值（0–1）
   gate_range_db / gate_ratio       噪音門最多壓低幾 dB、壓縮比
+  gate_release    噪音門放開後多快關回去（毫秒，預設 250；回音重時用 100，字和字之間的回音尾巴會收得比較乾淨）
 講話較輕、起伏大的人，或素材本身已被壓縮過的，要用溫和設定，否則子音、輕聲的字會被一起削掉
 （輸出後請轉錄比對，並檢查 4–8 kHz 有沒有被削掉）。
 
@@ -67,6 +71,37 @@ def load(path, highpass=None):
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-vn", *af, "-ac", "1", "-ar", str(SR),
                           "-f", "s16le", "-"], capture_output=True, check=True).stdout
     return np.frombuffer(raw, np.int16).astype(np.float32) / 32768
+
+
+def wpe(y, taps=20, delay=3, iters=3, n_fft=1536, hop=384, chunk=48):
+    """單聲道 WPE（Nakatani/Yoshioka 的加權預測誤差法）：每個頻率用前面 delay～delay+taps 格的頻譜
+    線性預測「現在還在迴盪的殘響」，再扣掉；權重是去回音後的能量，迭代幾次收斂。頻率分批算省記憶體"""
+    from scipy.signal import istft, stft
+    _, _, Y = stft(y, fs=SR, nperseg=n_fft, noverlap=n_fft - hop)
+    Y = Y.astype(np.complex64)                 # (頻率, 時間)
+    Fn, Tn = Y.shape
+    X = Y.copy()
+    for f0 in range(0, Fn, chunk):
+        Yf = Y[f0:f0 + chunk]                  # (c, T)
+        c = Yf.shape[0]
+        # 延遲後的歷史頻譜堆成 (c, T, taps)
+        Yt = np.zeros((c, Tn, taps), np.complex64)
+        for k in range(taps):
+            s = delay + k
+            Yt[:, s:, k] = Yf[:, :Tn - s]
+        Xf = Yf
+        for _ in range(iters):
+            lam = np.maximum(np.abs(Xf) ** 2, 1e-10)                    # (c, T)
+            w = 1.0 / lam
+            R = np.einsum("ctk,ct,ctl->ckl", Yt, w, Yt.conj())          # (c, taps, taps)
+            P = np.einsum("ctk,ct,ct->ck", Yt, w, Yf.conj())            # (c, taps)
+            R += 1e-6 * np.trace(R, axis1=1, axis2=2)[:, None, None] / taps * np.eye(taps, dtype=np.complex64)
+            G = np.linalg.solve(R, P[..., None])[..., 0]                # (c, taps)
+            Xf = Yf - np.einsum("ck,ctk->ct", G.conj(), Yt)
+        X[f0:f0 + chunk] = Xf
+    _, out = istft(X, fs=SR, nperseg=n_fft, noverlap=n_fft - hop)
+    out = out[:len(y)]
+    return np.pad(out, (0, len(y) - len(out))).astype(np.float32)
 
 
 def dereverb(y, rt60, floor_db=-15.0, delay=0.05, n_fft=1024, hop=256):
@@ -142,8 +177,10 @@ def main():
         c.update(conf.get("default", {}))
         c.update(conf.get(name, {}))
         a = load(src, c.get("highpass"))
+        if c.get("wpe"):
+            a = wpe(a, int(c["wpe"]), iters=int(c.get("wpe_iters", 3)))
         if c.get("dereverb"):
-            a = dereverb(a, c["dereverb"], c.get("dereverb_floor_db", -15.0))
+            a = dereverb(a, c["dereverb"], c.get("dereverb_floor_db", -15.0), delay=c.get("dereverb_delay", 0.05))
         n = SR // 50  # 20ms
         frames = a[: len(a) // n * n].reshape(-1, n)
         db = 20 * np.log10(np.sqrt((frames ** 2).mean(axis=1)) + 1e-9)
@@ -169,7 +206,7 @@ def main():
             # 人聲大小：20ms 響度的 p90（側鏈時看 RNNoise 輸出）；門檻比它低 gate_below_db（或直接用 gate_threshold）
             thr = c.get("gate_threshold") or 10 ** ((p90_db(key if key is not None else y) - c["gate_below_db"]) / 20)
             gate = (f"threshold={thr:.5f}:ratio={c['gate_ratio']}"
-                    f":range={10 ** (-c['gate_range_db'] / 20):.4f}:attack=6:release=250:knee=3")
+                    f":range={10 ** (-c['gate_range_db'] / 20):.4f}:attack=6:release={c.get('gate_release', 250)}:knee=3")
         if post or gate:
             processed = wav[:-4] + "_p.wav"
             chain = ",".join(post)
@@ -189,7 +226,7 @@ def main():
                         "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
                         "-c:a", "aac", "-b:a", "256k", "-ac", "2", dst], check=True)
         os.remove(wav)
-        print(f"{name}: 去回音 {c.get('dereverb') or '-'}、強度 {c['strength']}、nstd {c['nstd']}、高通 {c.get('highpass') or '-'}、"
+        print(f"{name}: WPE {c.get('wpe') or '-'}、去回音 {c.get('dereverb') or '-'}、強度 {c['strength']}、nstd {c['nstd']}、高通 {c.get('highpass') or '-'}、"
               f"EQ {'有' if c.get('eq') else '-'}、RNNoise {c.get('rnnoise') or '-'}、最多壓 {c['gate_range_db']}dB，"
               f"噪音樣本 {len(quiet) / SR:.1f}s，音軌延遲 {off:.3f}s → {dst}")
 
