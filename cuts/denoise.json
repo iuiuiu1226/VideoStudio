@@ -58,7 +58,9 @@
     "gate_range_db": 10
   },
   "IMG_8235.MOV": {
-    "highpass": 150,
+    "highpass": 160,
+    "dfn": true,
+    "dereverb_after_dfn": true,
     "dereverb_erb": {
       "rt_lo": 1.5,
       "rt_hi": 0.8,
@@ -66,16 +68,16 @@
       "floor_db": -25,
       "delay": 0.03
     },
-    "dfn": true,
-    "eq": "equalizer=f=135:t=q:w=5:g=-3,equalizer=f=193:t=q:w=6:g=-5,equalizer=f=217:t=q:w=6:g=-5,equalizer=f=375:t=q:w=6:g=-4,equalizer=f=451:t=q:w=5:g=-3,equalizer=f=574:t=q:w=5:g=-3,equalizer=f=691:t=q:w=8:g=-4,equalizer=f=350:t=q:w=0.8:g=-4,equalizer=f=3000:t=q:w=1.0:g=4,highshelf=f=6000:g=2",
+    "eq": "equalizer=f=135:t=q:w=5:g=-3,equalizer=f=193:t=q:w=6:g=-5,equalizer=f=217:t=q:w=6:g=-5,equalizer=f=375:t=q:w=6:g=-4,equalizer=f=691:t=q:w=8:g=-4,equalizer=f=250:t=q:w=0.7:g=-5,equalizer=f=800:t=q:w=1.5:g=-2,equalizer=f=2500:t=q:w=1.0:g=4.5,equalizer=f=4500:t=q:w=1.0:g=3,aexciter=level_in=1:level_out=1:amount=1.5:drive=6:blend=0:freq=3500:ceil=12000",
     "gate_key_hf": true,
-    "gate_below_db": 26,
-    "gate_range_db": 15,
-    "gate_release": 200,
-    "dereverb_after_dfn": true
+    "gate_below_db": 22,
+    "gate_range_db": 24,
+    "gate_release": 100
   },
   "IMG_8236.MOV": {
-    "highpass": 150,
+    "highpass": 160,
+    "dfn": true,
+    "dereverb_after_dfn": true,
     "dereverb_erb": {
       "rt_lo": 1.5,
       "rt_hi": 0.8,
@@ -83,12 +85,10 @@
       "floor_db": -25,
       "delay": 0.03
     },
-    "dfn": true,
-    "eq": "equalizer=f=135:t=q:w=5:g=-3,equalizer=f=193:t=q:w=6:g=-5,equalizer=f=217:t=q:w=6:g=-5,equalizer=f=375:t=q:w=6:g=-4,equalizer=f=451:t=q:w=5:g=-3,equalizer=f=574:t=q:w=5:g=-3,equalizer=f=691:t=q:w=8:g=-4,equalizer=f=350:t=q:w=0.8:g=-4,equalizer=f=3000:t=q:w=1.0:g=4,highshelf=f=6000:g=2",
+    "eq": "equalizer=f=135:t=q:w=5:g=-3,equalizer=f=193:t=q:w=6:g=-5,equalizer=f=217:t=q:w=6:g=-5,equalizer=f=375:t=q:w=6:g=-4,equalizer=f=691:t=q:w=8:g=-4,equalizer=f=250:t=q:w=0.7:g=-5,equalizer=f=800:t=q:w=1.5:g=-2,equalizer=f=2500:t=q:w=1.0:g=4.5,equalizer=f=4500:t=q:w=1.0:g=3,aexciter=level_in=1:level_out=1:amount=1.5:drive=6:blend=0:freq=3500:ceil=12000",
     "gate_key_hf": true,
-    "gate_below_db": 26,
-    "gate_range_db": 15,
-    "gate_release": 200,
-    "dereverb_after_dfn": true
+    "gate_below_db": 22,
+    "gate_range_db": 24,
+    "gate_release": 100
   }
 }
