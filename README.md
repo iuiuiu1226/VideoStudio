@@ -155,7 +155,9 @@ v2：開頭問題卡（女聲旁白「看不見、摸不到的東西，就不存
 | v2（無配樂、無封面） | 69.0 秒 | 開頭問題卡「看不見、摸不到的東西，就不存在嗎？」、結尾收尾卡「看不見，不代表不存在」 |
 | v3（無配樂、無封面） | 60.6 秒 | 使用者要求：拿掉開頭、結尾的動畫字卡（直接從講師「看不著，摸不到」開始）、拿掉 C、D 段的動畫（水蒸氣看不到、能量⇄物質）、拿掉「液體 → 固體」字卡；整支加強降噪＋去回音。`cuts/class02/seg2_lecture.json` → `seg4_end.json`（`tools/gen_class02.py`；片段與重點字時間 `cuts/class02/clips.json`；圖示 `tools/class02_anim.py`） |
 | v4（無配樂、無封面） | 60.6 秒 | 使用者：「回音還是很大」→ 只改聲音，畫面與 v3 相同；去回音加強（見下方降噪說明），處理後輸出到 `px4` |
-| v5／v5 加強（無配樂、無封面） | 60.6 秒 | 使用者：「回音太大了」→ 換做法（見下方 v5 說明）。標準版設定在 `cuts/denoise.json`，加強版 `cuts/class02/denoise_strong.json`，兩支都給使用者選 |
+| v5／v5 加強（無配樂、無封面） | 60.6 秒 | 使用者：「回音太大了」→ 換做法（見下方 v5 說明），兩支給使用者選 |
+| v6（沒交） | 60.6 秒 | 使用者同意裝 DeepFilterNet 後的第一版：去回音＋噪音門太強，AI 把被扣薄的字也拿掉（「降溫」「所影響」「零下 20 度」），逐字稿掉到 88–89%，沒交 |
+| v7（無配樂、無封面） | 60.6 秒 | 先 AI 降噪（DeepFilterNet3）→ 再 `dereverb_erb` 去回音（低頻 1.5／高頻 0.8 秒、扣除倍數 1.5、最多扣 25 dB）→ 共鳴頻率 EQ → 輕噪音門（最多壓 15 dB）。設定在 `cuts/denoise.json` |
 
 - 旁白稿 `scripts/narration/class02_steam.txt`：開頭問題與結尾收尾句同一次配音（三次挑 take 1），按停頓切開、加快 1.12 倍
 - 開頭、結尾卡片上的字就是旁白內容，所以這兩段不另外上字幕
@@ -192,6 +194,13 @@ v2：開頭問題卡（女聲旁白「看不見、摸不到的東西，就不存
   要真的去掉需要 AI 去回音工具。這個環境下載不到（GitHub、download.pytorch.org 被擋，安裝外部套件也被自動權限擋下），
   所以把剪好的講師原音（`build_segment.py cuts/class02/seg2_lecture.json --src pxr`，不含片尾、沒降噪）放上下載頁，
   使用者可以拿去 Adobe Podcast「Enhance Speech」處理；處理好的聲音放回雲端素材資料夾，再對齊換進影片（長度 54.57 秒，從 0 秒開始）
+- 之後使用者同意安裝 DeepFilterNet：程式 `pip install deepfilternet`（會把 numpy 降到 1.x，要再裝回 2.x），
+  模型檔 GitHub 下載不到（403），使用者自己下載 `DeepFilterNet3.zip` 放進雲端素材資料夾（id `1F__TXVFVrZGTc5jM7fWci_2CYM5SjlmP`），
+  `tools/setup.sh` 會從那裡拿、解壓到 `assets/models/deepfilternet/`。`denoise.py` 的 `dfn: true` 用它取代 noisereduce＋RNNoise。
+  DeepFilterNet 主要是降噪，本身不太去回音（它會保留殘響）；它的用處是：先把噪音清掉，再去回音時人聲不會被扣成碎片。
+- v7 選參數：同三句（降溫／零下 20 度／所影響）用 whisper 三種解碼取平均＋辨識信心，再用 `tools/srmr.py` 量回音：
+  強去回音（扣除倍數 2.2 以上）或強噪音門（壓 30 dB 以上）字會掉到 88–93%；扣除倍數 1.5＋先 AI 降噪、噪音門只壓 15 dB 字有 94–96%，
+  回音指標 7.2（原音 3.4、v5 6.2），是目前「回音少、字完整」最好的平衡
 
 ## 短影音配音＋配樂流程（Gemini TTS＋Lyria）
 

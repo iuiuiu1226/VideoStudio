@@ -13,4 +13,13 @@ mkdir -p assets/fonts assets/models/rnnoise
 # RNNoise 人聲降噪模型（ffmpeg arnndn 用，tools/denoise.py 的 rnnoise 設定）
 [ -f assets/models/rnnoise/sh.rnnn ] || curl -sSL -o assets/models/rnnoise/sh.rnnn \
     "https://raw.githubusercontent.com/GregorR/rnnoise-models/master/somnolent-hogwash-2018-09-01/sh.rnnn"
+# AI 降噪 DeepFilterNet3（tools/denoise.py 的 dfn 設定）：程式從 PyPI 裝（它會把 numpy 降到 1.x，裝完再裝回 2.x），
+# 模型檔環境下載不到 GitHub，使用者放在雲端「第七感影片剪輯素材」資料夾（DeepFilterNet3.zip），從那裡拿
+python3 -c "import df" 2>/dev/null || { pip install -q deepfilternet && pip install -q "numpy>=2.1"; }
+if [ ! -f assets/models/deepfilternet/DeepFilterNet3/config.ini ]; then
+    mkdir -p assets/models/deepfilternet
+    gdown -q 1F__TXVFVrZGTc5jM7fWci_2CYM5SjlmP -O /tmp/DeepFilterNet3.zip < /dev/null
+    python3 -I -c "import zipfile; zipfile.ZipFile('/tmp/DeepFilterNet3.zip').extractall('assets/models/deepfilternet')"
+    rm -f /tmp/DeepFilterNet3.zip
+fi
 echo "準備完成：字型在 assets/fonts/，模型在 assets/models/（faster-whisper large-v3 第一次執行時會自動下載）"

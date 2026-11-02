@@ -31,6 +31,13 @@
                   不會把諧波切成一塊一塊（逐頻率扣太猛會有「隧道／水聲」，聽起來反而像回音）。值是設定物件：
                   rt_lo／rt_hi 低頻（f_lo 500 Hz 以下）／高頻（f_hi 2 kHz 以上）的殘響秒數（教室低頻拖比較長）、
                   alpha 扣除倍數（>1 扣得更多）、floor_db 最多扣幾 dB（功率）、delay 幾秒後開始算殘響
+  dfn             AI 降噪（DeepFilterNet3，取代 noisereduce＋RNNoise）：true 就用。放在去回音之後，
+                  會把去回音扣出來的碎片修回自然的人聲；噪音門也改看它的輸出。
+                  模型放 assets/models/deepfilternet/DeepFilterNet3（setup.sh 從雲端素材資料夾下載），
+                  程式 pip install deepfilternet（它會把 numpy 降到 1.x，裝完要再裝回 numpy 2）。
+                  dereverb_after_dfn: true 改成先 AI 降噪、再 dereverb_erb 去回音（噪音先清掉，殘響估得比較準）。
+                  注意：去回音或噪音門開太強，AI 會把被扣薄的字當成噪音一起拿掉（v6 吃字），
+                  課堂精華 VOL.02 實測 dereverb_erb 用 alpha 1.0–1.5、噪音門最多壓 15 dB 字才完整
   gate_below_db / gate_threshold   噪音門門檻：比人聲 p90 低幾 dB，或直接給絕對值（0–1）
   gate_range_db / gate_ratio       噪音門最多壓低幾 dB、壓縮比
   gate_key_hf     噪音門只看 1.5–6 kHz 判斷有沒有在講話（true）：低頻的回音尾巴拖很長、高頻很快就停，
@@ -177,6 +184,22 @@ def dereverb_erb(y, rt_lo=1.2, rt_hi=0.7, f_lo=500, f_hi=2000, floor_db=-20.0, a
     return np.pad(out, (0, len(y) - len(out))).astype(np.float32)
 
 
+_DFN = None
+
+
+def dfn_enhance(y):
+    """DeepFilterNet3 降噪（48 kHz 單聲道）"""
+    global _DFN
+    import torch
+    from df.enhance import enhance, init_df
+    if _DFN is None:
+        base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "models", "deepfilternet", "DeepFilterNet3")
+        _DFN = init_df(model_base_dir=os.path.normpath(base), log_level="ERROR")[:2]
+    m, st = _DFN
+    out = enhance(m, st, torch.from_numpy(np.ascontiguousarray(y, dtype=np.float32)[None])).numpy()[0]
+    return out[:len(y)].astype(np.float32)
+
+
 def write_wav(path, y):
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
@@ -231,21 +254,28 @@ def main():
             a = wpe(a, int(c["wpe"]), iters=int(c.get("wpe_iters", 3)))
         if c.get("dereverb"):
             a = dereverb(a, c["dereverb"], c.get("dereverb_floor_db", -15.0), delay=c.get("dereverb_delay", 0.05))
-        if c.get("dereverb_erb"):
+        if c.get("dereverb_erb") and not c.get("dereverb_after_dfn"):
             a = dereverb_erb(a, **c["dereverb_erb"])
         n = SR // 50  # 20ms
         frames = a[: len(a) // n * n].reshape(-1, n)
         db = 20 * np.log10(np.sqrt((frames ** 2).mean(axis=1)) + 1e-9)
         quiet = frames[db <= np.percentile(db, c["noise_pct"])].reshape(-1)
-        if c.get("nonstat"):
+        key = None
+        if c.get("dfn"):
+            y = dfn_enhance(a)
+            key = y                                  # 噪音門看 AI 降噪後的聲音判斷有沒有在講話
+            if c.get("dereverb_erb") and c.get("dereverb_after_dfn"):
+                y = dereverb_erb(y, **c["dereverb_erb"])
+            if c.get("gate_key_hf"):
+                key = ffx(key, "highpass=f=1500:poles=2,lowpass=f=6000:poles=2")
+        elif c.get("nonstat"):
             # 非穩態降噪：噪音樣本跟著時間更新（time_constant_s 秒），適合背景聲一直在變的素材
             y = nr.reduce_noise(y=a, sr=SR, stationary=False, prop_decrease=c["strength"],
                                 time_constant_s=c["nonstat"], n_fft=2048)
         else:
             y = nr.reduce_noise(y=a, sr=SR, y_noise=quiet, stationary=True, prop_decrease=c["strength"],
                                 n_std_thresh_stationary=c["nstd"], n_fft=2048)
-        key = None
-        if c.get("rnnoise"):
+        if c.get("rnnoise") and not c.get("dfn"):
             model = rnn_model(c["rnnoise"])
             key = ffx(a, f"arnndn=m={model}")  # 全量 RNNoise 只拿來判斷哪裡有人聲
             y = ffx(y, f"arnndn=m={model}:mix={c.get('rnn_mix', 1.0)}")
@@ -281,7 +311,7 @@ def main():
                         "-c:a", "aac", "-b:a", "256k", "-ac", "2", dst], check=True)
         os.remove(wav)
         print(f"{name}: WPE {c.get('wpe') or '-'}、去回音 {c.get('dereverb') or c.get('dereverb_erb') or '-'}、強度 {c['strength']}、nstd {c['nstd']}、高通 {c.get('highpass') or '-'}、"
-              f"EQ {'有' if c.get('eq') else '-'}、RNNoise {c.get('rnnoise') or '-'}、最多壓 {c['gate_range_db']}dB，"
+              f"EQ {'有' if c.get('eq') else '-'}、RNNoise {c.get('rnnoise') or '-'}、AI 降噪 {'有' if c.get('dfn') else '-'}、最多壓 {c['gate_range_db']}dB，"
               f"噪音樣本 {len(quiet) / SR:.1f}s，音軌延遲 {off:.3f}s → {dst}")
 
 
