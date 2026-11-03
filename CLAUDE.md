@@ -64,4 +64,4 @@
 |---|---|---|
 | 學員分享 | `assets/music/funk105_c.mp3`（C 拍擊貝斯，105 拍） | `--rel -19` ＋讓出中頻，`--no-duck --lufs -14 --fade-out 2.5` |
 | 生活應用 | 兩首交叉使用：`life01_light.mp3`（輕快放克，VOL.01）、`tiktok_beat.mp3`（抖音節拍，VOL.02），依內容挑 | 輕快放克 `--rel -16`＋讓出中頻；抖音節拍 `--rel -17` |
-| 課堂精華 | `assets/music/class01_science.mp3`（科普探索） | `--rel -15` ＋讓出中頻，`--curve` 結尾漸弱、`--fade-out 4` |
+| 課堂精華 | `assets/music/class01_science.mp3`（科普探索，VOL.01）；VOL.02 使用者覺得科普探索不適合，改用學員分享的 `funk105_c.mp3`，依內容挑 | 科普探索 `--rel -15` ＋讓出中頻，`--curve` 結尾漸弱、`--fade-out 4`；拍擊貝斯同學員分享 |
