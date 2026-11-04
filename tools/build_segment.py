@@ -17,6 +17,8 @@
   style.shift_y（或 clip 的 shift_y）把畫面往下移幾個像素，頂端用鏡像模糊補：IG Reels 上方介面（含模糊底）會蓋住畫面頂端約 270 px，
   標題放在那下面（y 288 起），人物頭頂太高的影片要讓出空間。
   hold 是結尾停格的秒數（聲音補靜音），讓下一段的交叉淡化不會吃掉這段最後一個字。
+  pad 是結尾多留的秒數：畫面照常往下播、聲音在 out 淡出後補靜音。講者一口氣講下去、原片沒有停頓可留時，
+  用它在剪接處補一個自然的換氣（約 0.2–0.5 秒），斷點才不會太快。
   xfade 是跟前一段的交叉淡化秒數（畫面溶接）；前一段結尾要留至少這麼長的空白聲音（會被剪掉），
   這一段的聲音從自己的開頭照常播放，不會被淡掉。
 """
@@ -28,6 +30,7 @@ import tempfile
 
 W, H, FPS = 1080, 1920, 30
 AFADE = 0.012  # 每個切點的音訊淡入淡出，避免爆音
+AFADE_OUT = 0.06  # 後面補靜音（pad、hold）時，聲音收尾淡出長一點，聽起來像自然停頓
 TARGET_LUFS = -16.0
 MAX_GAIN = 24.0
 
@@ -134,6 +137,9 @@ def main():
         # hold：結尾停格幾秒、聲音補靜音（下一段要交叉淡化、但這段講到最後一刻時，用來留出淡化的空白）
         body = dur
         hold = round(c.get("hold", 0.0) * FPS) / FPS
+        pad = round(c.get("pad", 0.0) * FPS) / FPS
+        speech = body              # 有聲音的長度（pad、hold 那段補靜音）
+        body = body + pad          # 畫面實際播放的長度（pad 那段畫面照常播）
         dur = body + hold
         xf = round(c.get("xfade", 0.0) * FPS) / FPS if i > 0 else 0.0
         t0 -= xf  # 交叉淡化：這段提早 xf 秒開始，跟前一段重疊
@@ -199,7 +205,8 @@ def main():
                 ride = f"volume='pow(10,({lerp_expr(gk, 'db', 't')})/20)':eval=frame,"
             af = ("aformat=sample_fmts=fltp,pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
                   f"highpass=f=80,volume={gain:.2f}dB,{ride}"
-                  f"afade=t=in:d={AFADE},afade=t=out:st={dur - AFADE:.4f}:d={AFADE}")
+                  f"afade=t=in:d={AFADE},afade=t=out:st={speech - AFADE_OUT if speech < dur else dur - AFADE:.4f}"
+                  f":d={AFADE_OUT if speech < dur else AFADE}")
             for s, e, text in c.get("subs", []):
                 events.append((t0 + s, t0 + min(e, dur), text, "Default"))
             # 特效字（搞笑字卡、圖示）：[開始, 結束, 文字]，時間是素材秒數；文字可含 ASS 標籤（位置、動畫）
@@ -229,7 +236,7 @@ def main():
         else:
             chains.append(f"[{vi}:v]fps={FPS},trim=duration={body:.4f},setpts=PTS-STARTPTS,{vf}{hold_vf}[v{i}]")
         chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
-                      f"atrim=duration={body:.4f},apad,atrim=duration={dur:.4f},asetpts=PTS-STARTPTS,{af}[a{i}]")
+                      f"atrim=duration={speech:.4f},apad,atrim=duration={dur:.4f},asetpts=PTS-STARTPTS,{af}[a{i}]")
         labels.append(f"[v{i}][a{i}]")
         starts.append(t0)
         xfades.append(xf)
