@@ -29,7 +29,8 @@
 | 版本 | 長度 | 剪輯清單 |
 |---|---|---|
 | v3（無配樂，HDR 色調修正） | 91.5 秒 | `cuts/life01/seg1_hook.json` … `cuts/life01/seg5_end.json` 依序接起來 |
-| v6＋配樂（最終版） | 73.1 秒 | 使用者修腳本：第 1 段刪「那我就在想 哇」（素材 64.25–66.48 拿掉，`#1a`／`#1b`）、第 3 段 `seg3_learn.json` 整段不用；`build_segment.py cuts/life01/seg1_hook.json seg2_why.json seg4_retake.json seg5_end.json`，配樂同 v5（`--rel -16`＋讓出中頻） |
+| v7＋配樂（名牌打碼，最終版） | 73.1 秒 | v6 成片上把主持人名牌（鄭乃綺）打馬賽克（見下方「名牌打馬賽克」），`output/BK生活應用_VOL01_v7_配樂_打碼.mp4`；封面同樣打碼（`cuts/cover_life01.json` 的 `mosaic`） |
+| v6＋配樂 | 73.1 秒 | 使用者修腳本：第 1 段刪「那我就在想 哇」（素材 64.25–66.48 拿掉，`#1a`／`#1b`）、第 3 段 `seg3_learn.json` 整段不用；`build_segment.py cuts/life01/seg1_hook.json seg2_why.json seg4_retake.json seg5_end.json`，配樂同 v5（`--rel -16`＋讓出中頻） |
 | 配樂版 v4 | 91.5 秒 | v3 加配樂 C「輕快放克」`assets/music/life01_light.mp3`（105 拍，從 0 秒開始、`level_music.py` 拉平），`mix_bgm.py --rel -16 --no-duck --lufs -14 --fade-out 2.5` 加讓出中頻的等化（同學員分享 VOL.01；使用者覺得 -19 太小聲，加大 3 dB）；逐字稿與 v3 相同 96%，遠處複訓段 98%（再加大到 -14 就開始吃字） |
 
 段落：鉤子（直播賣的精品是真的嗎→很多是假的、為什麼要用身體測）→ 她怎麼學會的 →
@@ -49,6 +50,7 @@
 | 版本 | 長度 | 剪輯清單 |
 |---|---|---|
 | v3（無配樂） | 49 秒 | `cuts/life02/seg1_joke.json`、`cuts/life02/seg2_test.json`、`cuts/life02/seg3_end.json` |
+| v6＋配樂（名牌打碼，最終版） | 49 秒 | v5 配樂版上把主持人名牌（鄭乃綺）打馬賽克，`output/BK生活應用_VOL02_v6_配樂_打碼.mp4`；無配樂備用版 `output/BK生活應用_VOL02_v6_打碼.mp4`；封面同樣打碼（`cuts/cover_life02.json` 的 `mosaic`） |
 | 配樂版 v4 | 49 秒 | v3 加配樂 C「抖音節拍」`assets/music/tiktok_beat.mp3`（從 40 秒開始，避開 30–40 秒的休息段；`level_music.py` 拉平），`mix_bgm.py --rel -17 --no-duck --lufs -14` |
 
 段落：前世今生、身邊的緣分 → 姊妹父母朋友，台下喊「寵物！」→「上輩子他是我的老婆或老公，這次有可能我當他的⋯」台下又喊「寵物！」（全場笑）→
@@ -58,6 +60,27 @@
 - 主持人與手機距離一直變，大小用臉部追蹤平滑後逐格固定（`frame_keys`），音量用人聲頻段算出的音量曲線拉平（`gain_keys`），
   整支用線性響度（`style.loudness = "linear"`），笑聲比講話略大
 - 降噪的噪音門改用絕對門檻（`gate_threshold`），以免把她較小聲的句子當成背景壓掉
+
+### 名牌打馬賽克（編號 2、3）
+
+主持人胸前的名牌（鄭乃綺）在成片上逐格打馬賽克，其他畫面、字幕、聲音不動：
+
+1. 找名牌：`tools/badge_track.py`（先找臉，只在臉下方用 SIFT 特徵點比對名牌樣本；擋住一半也找得到；
+   找不到的格用相對於臉的位置內插）→ 每格的打碼框 `cuts/life01/badge_mosaic.json`、`cuts/life02/badge_mosaic.json`。
+   編號 2 的遠景（舉手拉遠、掃全場）名牌只有幾個像素看不清楚，不打；編號 3 大笑彎腰那半秒（745–752 格）
+   自動追蹤跟不上，用 `cuts/life02/badge_fixes.json` 手動指定位置。
+2. 打碼：`tools/mosaic.py`。字幕、「台下：寵物！」特效字剛好壓在名牌上時，加 `--ass`
+   （`build_segment.py --ass-only` 輸出的同一份字幕檔），只糊字幕底下的畫面，字幕原樣保留。
+3. 檢查：逐格檢查圖確認，再拿打碼後的成品重跑一次 `badge_track.py` 的偵測，找不到合理大小的名牌才算通過
+   （編號 2、3 都是 0 格）。
+4. 封面：`cover.py` 設定檔的 `mosaic`（在疊文字之前打碼，標題不會跟著糊）。
+
+```
+python3 tools/build_segment.py cuts/life02/seg1_joke.json cuts/life02/seg2_test.json cuts/life02/seg3_end.json \
+    --src <素材> --font <字型資料夾> --ass-only /tmp/l2.ass
+python3 tools/mosaic.py output/BK生活應用_VOL02_v5_配樂.mp4 cuts/life02/badge_mosaic.json --ass /tmp/l2.ass \
+    --font <字型資料夾> -o output/BK生活應用_VOL02_v6_配樂_打碼.mp4
+```
 
 ## 標題位置（IG Reels）
 
@@ -83,8 +106,8 @@ IG 是滿版播放（9:16 影片在手機上會放大到上下貼齊），上方
 | 影片 | 最終版成片 | 下載頁版本 |
 |---|---|---|
 | 學員分享 VOL.01 | `output/BK學員分享_VOL01_v15_配樂C.mp4`（配樂 C 拍擊貝斯；配樂 S 版留在「其他版本」） | 1400k 壓縮版 |
-| 生活應用 VOL.01 | `output/BK生活應用_VOL01_v6_配樂.mp4`（配樂 C 輕快放克；v6 刪掉「那我就在想 哇」與第 3 段「她怎麼學會的」，73 秒） | 1850k |
-| 生活應用 VOL.02 | `output/BK生活應用_VOL02_v5_配樂.mp4`（抖音節拍） | 2800k 較高畫質 |
+| 生活應用 VOL.01 | `output/BK生活應用_VOL01_v7_配樂_打碼.mp4`（配樂 C 輕快放克；v6 刪掉「那我就在想 哇」與第 3 段「她怎麼學會的」，73 秒；v7 名牌打碼） | 1850k |
+| 生活應用 VOL.02 | `output/BK生活應用_VOL02_v6_配樂_打碼.mp4`（抖音節拍；v6 名牌打碼） | 2800k 較高畫質 |
 | 課堂精華 VOL.01 | `output/BK課堂精華_VOL01_v11_配樂.mp4`（科普探索） | 1950k 較高畫質 |
 
 下載頁每個檔案上限 20 MB，所以 1 分半的影片只能用約 1400k；短的影片畫質可以拉高。

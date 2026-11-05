@@ -9,6 +9,8 @@ grade（選填）是額外的調色（ffmpeg 濾鏡字串），例如臉色太�
 prefilter（選填）是縮放前的濾鏡，例如 atadenoise 用前後幾格合成降雜點，之後銳利化才不會把雜點放大。
 insets（選填）是疊在畫面上的圓形小圖：[{"path", "cx", "cy", "d", "label", "label_style": "gold"|"gray"}]，
 例如水結晶的對比圖；路徑相對於專案根目錄或絕對路徑。
+mosaic（選填）是要打馬賽克的範圍：[[x, y, w, h], …]（封面座標），例如人物身上的名牌；在疊漸層與文字之前處理，
+不會把標題一起打糊。block（選填，預設 12）是馬賽克格子大小。
 
 用法：
   python3 tools/cover.py cuts/cover_vol01.json --src <素材資料夾> --font <字型檔> -o output/cover_vol01.jpg
@@ -66,6 +68,13 @@ def main():
     cfg = json.load(open(args.config, encoding="utf-8"))
 
     img = grab(f"{args.src}/{cfg['src']}", cfg["t"], cfg["frame"], cfg.get("grade"), cfg.get("prefilter")).convert("RGBA")
+    # 馬賽克（例如名牌上的名字）：縮小再用最近點放大回去
+    blk = cfg.get("block", 12)
+    for x, y, w, h in cfg.get("mosaic", []):
+        box = (int(x), int(y), int(x + w), int(y + h))
+        reg = img.crop(box)
+        small = reg.resize((max(1, round(reg.width / blk)), max(1, round(reg.height / blk))), Image.BOX)
+        img.paste(small.resize(reg.size, Image.NEAREST), box[:2])
     # 漸層：上方略暗，中段以下逐漸轉成深藍黑，讓文字清楚
     y = np.linspace(0, 1, H)[:, None]
     a = np.clip(0.25 + np.maximum(0, (y - 0.42) / 0.38) * 0.75, 0, 0.94)

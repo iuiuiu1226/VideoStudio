@@ -25,6 +25,7 @@
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 
@@ -116,8 +117,11 @@ def main():
     ap.add_argument("cutlists", nargs="+", help="可給多個，依序接成一支")
     ap.add_argument("--src", required=True)
     ap.add_argument("--font", required=True, help="含字型檔的資料夾")
-    ap.add_argument("-o", "--out", required=True)
+    ap.add_argument("-o", "--out")
+    ap.add_argument("--ass-only", metavar="ASS", help="只輸出字幕檔（跟成片燒進去的完全相同）就結束，不剪片；給 tools/mosaic.py 保護字幕用")
     args = ap.parse_args()
+    if not args.out and not args.ass_only:
+        ap.error("需要 -o 或 --ass-only")
 
     specs = [json.load(open(p, encoding="utf-8")) for p in args.cutlists]
     style = specs[0]["style"]
@@ -193,7 +197,7 @@ def main():
                        f"[sa{i}]crop={W}:{H - sy}:0:0[sm{i}];[st{i}][sm{i}]vstack")
             # 逐段把響度拉到同一基準，不同手機、不同距離錄的人聲才不會忽大忽小
             # "auto_gain": false 時不自動對齊，只用 gain_db／gain_keys（音量曲線已經算好絕對大小時用）
-            lufs = measure_lufs(src, c["in"], dur) if c.get("auto_gain", True) else None
+            lufs = measure_lufs(src, c["in"], dur) if c.get("auto_gain", True) and not args.ass_only else None
             # 降噪後的素材可能很小聲，上限放寬到 ±MAX_GAIN；"gain_db" 可逐段微調
             gain = 0.0 if lufs is None or lufs < -70 else max(-MAX_GAIN, min(MAX_GAIN, TARGET_LUFS - lufs))
             gain += c.get("gain_db", 0.0)
@@ -281,6 +285,10 @@ def main():
 
     ass = os.path.join(tmp, "subs.ass")
     build_ass(events, ass, style)
+    if args.ass_only:
+        shutil.copy(ass, args.ass_only)
+        print(f"{args.ass_only}  {t0:.2f}s")
+        return
     if style.get("loudness") == "linear":
         # 線性響度：先只跑聲音量整支響度，再整體套一個固定增益＋限幅，逐段的大小關係原樣保留
         # （預設的 loudnorm 是動態的，會把每段各自拉回目標，gain_db 微調會被抵銷）
