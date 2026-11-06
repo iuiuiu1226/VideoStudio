@@ -189,7 +189,8 @@ def main():
             trc = is_hdr(src)
             if trc:
                 vf = vf.replace("format=yuv420p,setsar=1", tonemap_chain(trc) + "format=yuv420p,setsar=1")
-            sy = 0 if c.get("no_overlay") else int(c.get("shift_y", style.get("shift_y", 0)))
+            # 取偶數：yuv420p 的高度要偶數，奇數會被裁成少 1 列，接起來尺寸對不上
+            sy = 0 if c.get("no_overlay") else int(c.get("shift_y", style.get("shift_y", 0))) // 2 * 2
             if sy:
                 # 整個畫面往下移 sy 像素：標題放在 IG 上方介面下面（見 build_ass），人物頭頂要讓出空間。
                 # 底部裁掉 sy，頂端空出的窄條用最上面幾列鏡像＋模糊補上（手機上會在狀態列底下）
