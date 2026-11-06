@@ -13,6 +13,8 @@
   fx 是特效字（亮黃粗體、置中對齊，位置與動畫用 ASS 標籤寫在文字裡），時間是素材秒數。
   gain_keys 是段落內的音量曲線（t 為素材秒數、db 為增益）；style.loudness = "linear" 時整支只做固定增益＋限幅。
   問題字卡：{"card": "文字", "dur": 秒數}，深色底置中白字、無聲。
+  join：跟前一段是同一句話中間的剪接（拿掉停頓、語助詞），聲音前後交疊 0.06 秒淡入淡出，接點不會「喀」一下、背景聲不會跳。
+  room：背景聲檔（同一支素材安靜處做的循環檔），pad、hold 補停頓時用它，不用完全無聲。
   overlay 是疊在畫面上的透明動畫檔（例如 qtrle 含 alpha 的 .mov），從該 clip 開頭對齊，疊在字幕底下。
   style.shift_y（或 clip 的 shift_y）把畫面往下移幾個像素，頂端用鏡像模糊補：IG Reels 上方介面（含模糊底）會蓋住畫面頂端約 270 px，
   標題放在那下面（y 288 起），人物頭頂太高的影片要讓出空間。
@@ -32,6 +34,8 @@ import tempfile
 W, H, FPS = 1080, 1920, 30
 AFADE = 0.012  # 每個切點的音訊淡入淡出，避免爆音
 AFADE_OUT = 0.06  # 後面補靜音（pad、hold）時，聲音收尾淡出長一點，聽起來像自然停頓
+XJ = 0.03  # join：同一句話中間的剪接點，前後聲音各多拿 0.03 秒交疊淡入淡出（共 0.06 秒），接點不會「喀」一下
+RX = 0.05  # room：補停頓的背景聲跟人聲交疊淡入淡出的長度
 TARGET_LUFS = -16.0
 MAX_GAIN = 24.0
 
@@ -134,8 +138,19 @@ def main():
     spans = []  # 人物畫面的時間區段（字卡不放標題、Logo）
     fade_end = set()  # 這些區段的標題在結尾淡出（後面交叉淡化接片尾）
     n_in = 0
+    clips = spec["clips"]
 
-    for i, c in enumerate(spec["clips"]):
+    def joins(i):
+        # join：跟前一段是同一句話中間的剪接（同一支素材、前一段沒有補停頓、不是交叉淡化），聲音交疊淡入淡出
+        if i == 0 or not clips[i].get("join"):
+            return False
+        p, c = clips[i - 1], clips[i]
+        return ("card" not in p and "card" not in c and p.get("src") == c.get("src")
+                and not p.get("pad") and not p.get("hold") and not c.get("xfade"))
+    J = [joins(i) for i in range(len(clips))]
+    xjs = []  # 每段聲音前後多拿的秒數
+
+    for i, c in enumerate(clips):
         raw = c["dur"] if "card" in c else c["out"] - c["in"]
         dur = round(raw * FPS) / FPS
         # hold：結尾停格幾秒、聲音補靜音（下一段要交叉淡化、但這段講到最後一刻時，用來留出淡化的空白）
@@ -162,6 +177,20 @@ def main():
             inputs += ["-ss", f"{c['in']}", "-t", f"{dur + 0.2}", "-i", src]
             vi = ai = n_in
             n_in += 1
+            xj_in = XJ if J[i] else 0.0
+            xj_out = XJ if i + 1 < len(clips) and J[i + 1] else 0.0
+            if xj_in:
+                inputs += ["-ss", f"{c['in'] - xj_in:.4f}", "-t", f"{dur + 0.2 + xj_in}", "-i", src]
+                ai = n_in
+                n_in += 1
+            # room：補停頓（pad、hold）用這支素材的背景聲（循環播放），不用完全無聲；
+            # 教室本來就有空氣聲，突然變全靜音再出現，聽起來很不自然
+            room = None
+            if c.get("room") and pad + hold > 0:
+                room = c["room"] if os.path.exists(c["room"]) else os.path.join(args.src, c["room"])
+                inputs += ["-stream_loop", "-1", "-i", room]
+                ri = n_in
+                n_in += 1
             if "v_in" in c:
                 # 畫面取自另一個時間點（例如聲音先進來，畫面還停在全場舉手的鏡頭）
                 inputs += ["-ss", f"{c['v_in']}", "-t", f"{dur + 0.2}", "-i", src]
@@ -208,10 +237,16 @@ def main():
             if "gain_keys" in c:
                 gk = [{**k, "t": k["t"] - c["in"]} for k in c["gain_keys"]]
                 ride = f"volume='pow(10,({lerp_expr(gk, 'db', 't')})/20)':eval=frame,"
+            la = dur + xj_in + xj_out  # 這段聲音的長度（含前後交疊的部分）
+            if xj_out:
+                fade_out = ""
+            elif room or speech >= dur:
+                fade_out = f",afade=t=out:st={la - AFADE:.4f}:d={AFADE}"
+            else:
+                fade_out = f",afade=t=out:st={speech + xj_in - AFADE_OUT:.4f}:d={AFADE_OUT}"
             af = ("aformat=sample_fmts=fltp,pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
                   f"highpass=f=80,volume={gain:.2f}dB,{ride}"
-                  f"afade=t=in:d={AFADE},afade=t=out:st={speech - AFADE_OUT if speech < dur else dur - AFADE:.4f}"
-                  f":d={AFADE_OUT if speech < dur else AFADE}")
+                  + ("" if xj_in else f"afade=t=in:d={AFADE},") + "anull" + fade_out)
             for s, e, text in c.get("subs", []):
                 events.append((t0 + s, t0 + min(e, dur), text, "Default"))
             # 特效字（搞笑字卡、圖示）：[開始, 結束, 文字]，時間是素材秒數；文字可含 ASS 標籤（位置、動畫）
@@ -240,8 +275,23 @@ def main():
             chains.append(f"[b{i}][o{i}]overlay=0:0:eof_action=pass,format=yuv420p[v{i}]")
         else:
             chains.append(f"[{vi}:v]fps={FPS},trim=duration={body:.4f},setpts=PTS-STARTPTS,{vf}{hold_vf}[v{i}]")
-        chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
-                      f"atrim=duration={speech:.4f},apad,atrim=duration={dur:.4f},asetpts=PTS-STARTPTS,{af}[a{i}]")
+        if "card" in c:
+            xj_in = xj_out = 0.0
+            room = None
+            la = dur
+        if room:
+            # 人聲最後 RX 秒淡出、背景聲淡入疊上去（出點本來就切在安靜處，淡掉的是空氣聲，不會吃到字）
+            chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=duration={speech + xj_in:.4f},"
+                          f"asetpts=PTS-STARTPTS,afade=t=out:st={speech + xj_in - RX:.4f}:d={RX}[s{i}]")
+            dl = int(round((speech + xj_in - RX) * 1000))
+            chains.append(f"[{ri}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=duration={pad + hold + RX:.4f},"
+                          f"asetpts=PTS-STARTPTS,afade=t=in:d={RX},adelay={dl}|{dl}[r{i}]")
+            chains.append(f"[s{i}][r{i}]amix=inputs=2:duration=longest:normalize=0,atrim=duration={la:.4f},{af}[a{i}]")
+        else:
+            chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
+                          f"atrim=duration={min(speech + xj_in + xj_out, la):.4f},apad,atrim=duration={la:.4f},"
+                          f"asetpts=PTS-STARTPTS,{af}[a{i}]")
+        xjs.append((xj_in, xj_out))
         labels.append(f"[v{i}][a{i}]")
         starts.append(t0)
         xfades.append(xf)
@@ -250,15 +300,20 @@ def main():
 
     def audio_join(out_label):
         # 下一段要交叉淡化時，這段結尾的空白聲音剪掉同樣長度，讓下一段的聲音照常從頭播放
-        parts, trims = [], []
+        # join 的片段跟前一段交疊淡入淡出（各多拿 XJ 秒，交疊 2×XJ），總長度不變、畫面不受影響
+        parts, steps = [], []
         for i in range(len(labels)):
             cut = xfades[i + 1] if i + 1 < len(labels) else 0.0
+            lab = f"[a{i}]"
             if cut > 0:
-                trims.append(f"[a{i}]atrim=duration={durs[i] - cut:.4f},asetpts=PTS-STARTPTS[at{i}]")
-                parts.append(f"[at{i}]")
+                steps.append(f"{lab}atrim=duration={durs[i] + sum(xjs[i]) - cut:.4f},asetpts=PTS-STARTPTS[at{i}]")
+                lab = f"[at{i}]"
+            if J[i] and parts:
+                steps.append(f"{parts[-1]}{lab}acrossfade=d={2 * XJ:.3f}:c1=tri:c2=tri[aj{i}]")
+                parts[-1] = f"[aj{i}]"
             else:
-                parts.append(f"[a{i}]")
-        return ";".join(trims + ["".join(parts) + f"concat=n={len(labels)}:v=0:a=1{out_label}"])
+                parts.append(lab)
+        return ";".join(steps + ["".join(parts) + f"concat=n={len(parts)}:v=0:a=1{out_label}"])
 
     def video_join(out_label):
         # 一般接續用 concat，有 xfade 的地方用 xfade 溶接

@@ -29,7 +29,9 @@
       ],
       "auto_gain": false,
       "gain_db": 15.3,
-      "shift_y": 190
+      "shift_y": 190,
+      "pad": 0.12,
+      "room": "room_IMG_8229.wav"
     },
     {
       "id": "#A1b",
@@ -46,7 +48,8 @@
       "auto_gain": false,
       "gain_db": 15.3,
       "shift_y": 190,
-      "pad": 0.2
+      "pad": 0.2,
+      "room": "room_IMG_8229.wav"
     },
     {
       "id": "#A2 不變",
@@ -68,7 +71,8 @@
       "auto_gain": false,
       "gain_db": 15.3,
       "shift_y": 190,
-      "pad": 0.3
+      "pad": 0.3,
+      "room": "room_IMG_8229.wav"
     },
     {
       "id": "#A3 提問",
@@ -84,7 +88,8 @@
       ],
       "auto_gain": false,
       "gain_db": 15.3,
-      "pad": 0.4
+      "pad": 0.4,
+      "room": "room_IMG_8229.wav"
     },
     {
       "id": "#C2a 宇宙",
@@ -94,12 +99,14 @@
       "subs": [
         [
           0.0,
-          1.91,
+          2.09,
           "它可能是這個宇宙中\\N一個人的能量的高低"
         ]
       ],
       "auto_gain": false,
-      "gain_db": 13.7
+      "gain_db": 13.7,
+      "pad": 0.18,
+      "room": "room_IMG_8231.wav"
     },
     {
       "id": "#C2b",
@@ -115,38 +122,25 @@
       ],
       "auto_gain": false,
       "gain_db": 13.7,
-      "pad": 0.2
+      "pad": 0.2,
+      "room": "room_IMG_8231.wav"
     },
     {
       "id": "#C3a 形容",
       "src": "IMG_8231.MOV",
       "in": 17.45,
-      "out": 17.69,
-      "subs": [
-        [
-          0.0,
-          0.24,
-          "很難用一個詞去形容"
-        ]
-      ],
-      "auto_gain": false,
-      "gain_db": 13.7
-    },
-    {
-      "id": "#C3a-2",
-      "src": "IMG_8231.MOV",
-      "in": 17.86,
       "out": 19.86,
       "subs": [
         [
           0.0,
-          2.25,
+          2.66,
           "很難用一個詞去形容"
         ]
       ],
       "auto_gain": false,
       "gain_db": 13.7,
-      "pad": 0.3
+      "pad": 0.3,
+      "room": "room_IMG_8231.wav"
     },
     {
       "id": "#C6 存在",
@@ -167,36 +161,40 @@
       "id": "#C6-2",
       "src": "IMG_8231.MOV",
       "in": 62.0,
-      "out": 62.85,
+      "out": 62.96,
       "subs": [
         [
           0.0,
-          0.85,
+          0.95,
           "但是能量是一個"
         ]
       ],
       "auto_gain": false,
-      "gain_db": 13.7
+      "gain_db": 13.7,
+      "join": true
     },
     {
       "id": "#C6-3",
       "src": "IMG_8231.MOV",
-      "in": 63.72,
+      "in": 63.61,
       "out": 68.92,
       "subs": [
         [
           0.0,
-          1.03,
+          1.14,
           "它是存在"
         ],
         [
-          1.03,
-          5.2,
+          1.14,
+          5.56,
           "但是很難去用語言\\N形容的一個東西"
         ]
       ],
       "auto_gain": false,
-      "gain_db": 13.7
+      "gain_db": 13.7,
+      "pad": 0.25,
+      "room": "room_IMG_8231.wav",
+      "join": true
     },
     {
       "id": "#C7 無法量化",
@@ -217,7 +215,8 @@
       ],
       "auto_gain": false,
       "gain_db": 13.7,
-      "hold": 0.3
+      "hold": 0.3,
+      "room": "room_IMG_8231.wav"
     },
     {
       "id": "#D1 振動頻率",
@@ -266,17 +265,18 @@
           "y": 331,
           "h": 1352
         }
-      ]
+      ],
+      "room": "room_IMG_8232.wav"
     },
     {
       "id": "#D2 光譜",
       "src": "IMG_8232.MOV",
       "in": 4.75,
-      "out": 6.25,
+      "out": 6.36,
       "subs": [
         [
           0.0,
-          1.5,
+          1.61,
           "我們就以光譜來說"
         ]
       ],
@@ -287,18 +287,21 @@
     {
       "id": "#D2-2",
       "src": "IMG_8232.MOV",
-      "in": 6.85,
+      "in": 6.74,
       "out": 9.6,
       "subs": [
         [
           0.0,
-          2.75,
+          3.06,
           "紅橙黃綠藍靛紫\\N它本身的能量就不同"
         ]
       ],
       "auto_gain": false,
       "gain_db": 14.6,
-      "shift_y": 26
+      "shift_y": 26,
+      "pad": 0.2,
+      "room": "room_IMG_8232.wav",
+      "join": true
     },
     {
       "id": "#D3a 比如說",
@@ -336,33 +339,40 @@
       "id": "#D3b-2",
       "src": "IMG_8232.MOV",
       "in": 12.18,
-      "out": 13.52,
+      "out": 13.63,
       "subs": [
         [
           0.0,
           1.32,
           "比如說紫外線或者藍光"
-        ]
-      ],
-      "auto_gain": false,
-      "gain_db": 14.6,
-      "shift_y": 26
-    },
-    {
-      "id": "#D3b-3",
-      "src": "IMG_8232.MOV",
-      "in": 13.92,
-      "out": 15.46,
-      "subs": [
+        ],
         [
-          0.0,
-          1.54,
+          1.37,
+          1.45,
           "為什麼會對眼睛有傷害？"
         ]
       ],
       "auto_gain": false,
       "gain_db": 14.6,
-      "shift_y": 26
+      "shift_y": 26,
+      "join": true
+    },
+    {
+      "id": "#D3b-3",
+      "src": "IMG_8232.MOV",
+      "in": 13.81,
+      "out": 15.46,
+      "subs": [
+        [
+          0.0,
+          1.65,
+          "為什麼會對眼睛有傷害？"
+        ]
+      ],
+      "auto_gain": false,
+      "gain_db": 14.6,
+      "shift_y": 26,
+      "join": true
     },
     {
       "id": "#D3b-4",
@@ -379,13 +389,15 @@
       "auto_gain": false,
       "gain_db": 14.6,
       "shift_y": 26,
-      "pad": 0.25
+      "pad": 0.25,
+      "room": "room_IMG_8232.wav",
+      "join": true
     },
     {
       "id": "#D4 相處",
       "src": "IMG_8232.MOV",
       "in": 21.86,
-      "out": 24.66,
+      "out": 24.77,
       "subs": [
         [
           0.0,
@@ -394,7 +406,7 @@
         ],
         [
           1.62,
-          2.8,
+          2.91,
           "他的能量高低\\N其實你會覺得很明顯"
         ]
       ],
@@ -405,30 +417,47 @@
     {
       "id": "#D4-2",
       "src": "IMG_8232.MOV",
-      "in": 25.12,
+      "in": 25.01,
       "out": 26.61,
       "subs": [
         [
           0.0,
-          1.74,
+          1.85,
           "他的能量高低\\N其實你會覺得很明顯"
         ]
       ],
       "auto_gain": false,
       "gain_db": 14.6,
       "shift_y": 26,
-      "pad": 0.25
+      "pad": 0.25,
+      "room": "room_IMG_8232.wav",
+      "join": true
     },
     {
       "id": "#D5 場域",
       "src": "IMG_8232.MOV",
       "in": 34.38,
-      "out": 35.72,
+      "out": 41.09,
       "subs": [
         [
           0.0,
-          1.34,
+          1.42,
           "所以能量高的人"
+        ],
+        [
+          1.47,
+          3.42,
+          "他可能一到那個場域裡面"
+        ],
+        [
+          3.46,
+          6.32,
+          "他就有鎮定整個場域的"
+        ],
+        [
+          6.32,
+          6.71,
+          "這種安定的\\N或者渲染的這種能力"
         ]
       ],
       "auto_gain": false,
@@ -438,47 +467,22 @@
     {
       "id": "#D5-2",
       "src": "IMG_8232.MOV",
-      "in": 36.02,
-      "out": 41.09,
-      "subs": [
-        [
-          0.0,
-          1.78,
-          "他可能一到那個場域裡面"
-        ],
-        [
-          1.82,
-          4.68,
-          "他就有鎮定整個場域的"
-        ],
-        [
-          4.68,
-          5.07,
-          "這種安定的\\N或者渲染的這種能力"
-        ]
-      ],
-      "auto_gain": false,
-      "gain_db": 14.6,
-      "shift_y": 26
-    },
-    {
-      "id": "#D5-3",
-      "src": "IMG_8232.MOV",
-      "in": 41.48,
+      "in": 41.4,
       "out": 41.99,
       "subs": [
         [
           0.0,
-          0.51,
+          0.59,
           "這種安定的\\N或者渲染的這種能力"
         ]
       ],
       "auto_gain": false,
       "gain_db": 14.6,
-      "shift_y": 26
+      "shift_y": 26,
+      "join": true
     },
     {
-      "id": "#D5-4",
+      "id": "#D5-3",
       "src": "IMG_8232.MOV",
       "in": 42.51,
       "out": 45.7,
@@ -492,7 +496,9 @@
       "auto_gain": false,
       "gain_db": 14.6,
       "shift_y": 26,
-      "pad": 0.3
+      "pad": 0.3,
+      "room": "room_IMG_8232.wav",
+      "join": true
     },
     {
       "id": "#E1a 水結晶",
@@ -530,7 +536,9 @@
       "auto_gain": false,
       "gain_db": 11.5,
       "shift_y": 250,
-      "pad": 0.2
+      "pad": 0.2,
+      "room": "room_IMG_8234.wav",
+      "join": true
     },
     {
       "id": "#E2 語言",
@@ -552,17 +560,18 @@
       "id": "#E2-2",
       "src": "IMG_8234.MOV",
       "in": 12.36,
-      "out": 13.96,
+      "out": 14.0,
       "subs": [
         [
           0.0,
-          1.6,
+          1.64,
           "這個結晶就不會產生"
         ]
       ],
       "auto_gain": false,
       "gain_db": 11.5,
-      "shift_y": 250
+      "shift_y": 250,
+      "join": true
     },
     {
       "id": "#E2-3",
@@ -579,71 +588,47 @@
       "auto_gain": false,
       "gain_db": 11.5,
       "shift_y": 250,
-      "pad": 0.3
+      "pad": 0.3,
+      "room": "room_IMG_8234.wav",
+      "join": true
     },
     {
       "id": "#E3 細胞",
       "src": "IMG_8234.MOV",
       "in": 26.8,
-      "out": 28.78,
-      "subs": [
-        [
-          0.0,
-          1.98,
-          "好的東西會產生比較\\N內在會讓自己更好"
-        ]
-      ],
-      "auto_gain": false,
-      "gain_db": 11.5,
-      "shift_y": 250
-    },
-    {
-      "id": "#E3-2",
-      "src": "IMG_8234.MOV",
-      "in": 29.06,
-      "out": 30.33,
-      "subs": [
-        [
-          0.0,
-          1.27,
-          "好的東西會產生比較\\N內在會讓自己更好"
-        ]
-      ],
-      "auto_gain": false,
-      "gain_db": 11.5,
-      "shift_y": 250
-    },
-    {
-      "id": "#E3-3",
-      "src": "IMG_8234.MOV",
-      "in": 30.6,
       "out": 34.72,
       "subs": [
         [
           0.0,
-          1.02,
+          3.53,
+          "好的東西會產生比較\\N內在會讓自己更好"
+        ],
+        [
+          3.53,
+          4.82,
           "你的細胞會更好"
         ],
         [
-          1.05,
-          4.37,
+          4.85,
+          8.17,
           "你的可能水的結晶\\N會很漂亮之類的"
         ]
       ],
       "auto_gain": false,
       "gain_db": 11.5,
       "shift_y": 250,
-      "pad": 0.3
+      "pad": 0.3,
+      "room": "room_IMG_8234.wav"
     },
     {
       "id": "#E4 科學",
       "src": "IMG_8234.MOV",
       "in": 36.05,
-      "out": 37.25,
+      "out": 37.36,
       "subs": [
         [
           0.0,
-          1.2,
+          1.31,
           "這種東西\\N是可以用科學解釋的"
         ]
       ],
@@ -654,18 +639,19 @@
     {
       "id": "#E4-2",
       "src": "IMG_8234.MOV",
-      "in": 37.75,
+      "in": 37.64,
       "out": 38.72,
       "subs": [
         [
           0.0,
-          0.9,
+          1.01,
           "這種東西\\N是可以用科學解釋的"
         ]
       ],
       "auto_gain": false,
       "gain_db": 11.5,
-      "shift_y": 250
+      "shift_y": 250,
+      "join": true
     },
     {
       "id": "#E4-3",
@@ -688,7 +674,9 @@
       "gain_db": 11.5,
       "shift_y": 250,
       "pad": 0.4,
-      "hold": 1.0
+      "hold": 1.0,
+      "room": "room_IMG_8234.wav",
+      "join": true
     }
   ]
 }
