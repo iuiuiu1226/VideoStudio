@@ -8,7 +8,8 @@
 3. 音量調到跟「講話中間的空檔」一樣（整支每 10 毫秒音量的最小 10%），補的停頓跟原本的停頓聽起來一樣大
 
 用法：
-  python3 tools/roomtone.py <工作檔.MOV> <輸出 room_xxx.wav> [--check]
+  python3 tools/roomtone.py <工作檔.MOV> <輸出 room_xxx.wav> [--check] [--win 開始秒 結束秒]
+  --win：只在這段時間裡找、音量也跟這段的空檔對齊（同一支素材前後背景聲差很多時用，例如後半台下人多、比較吵）
 """
 import argparse
 import subprocess
@@ -28,17 +29,21 @@ def main():
     ap.add_argument("video")
     ap.add_argument("out")
     ap.add_argument("--check", action="store_true", help="用 whisper 確認挑到的那段沒有人聲")
+    ap.add_argument("--win", nargs=2, type=float, metavar=("START", "END"), help="只在這段時間裡找（秒）")
     args = ap.parse_args()
     y, e = env16k(args.video)
     W = 80
     best = None
-    for k in range(50, len(e) - W - 50, 5):
+    k0, k1 = 50, len(e) - W - 50
+    if args.win:
+        k0, k1 = max(k0, int(args.win[0] * 100)), min(k1, int(args.win[1] * 100) - W)
+    for k in range(k0, k1, 5):
         seg = e[k:k + W]
         score = seg.mean() + 0.7 * max(0, seg.max() - seg.mean() - 5)
         if best is None or score < best[0]:
             best = (score, k)
     t = best[1] / 100
-    floor = np.percentile(e, 10)
+    floor = np.percentile(e[k0:k1 + W], 10)
     seg = y[int(t * 16000):int((t + 0.8) * 16000)]
     lvl = 20 * np.log10(np.sqrt(np.mean(seg ** 2)) + 1e-9)
     gain = floor - lvl
