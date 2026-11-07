@@ -1,0 +1,32 @@
+{
+  "src": "IMG_9802.MOV",
+  "t": 146.867,
+  "frame": {
+    "x": 130,
+    "y": 0,
+    "w": 1680,
+    "h": 2986
+  },
+  "series": "BK 測試｜課堂精華",
+  "logo": "assets/logo.png",
+  "quote_top": 990,
+  "prefilter": "atadenoise=s=9:0a=0.04:0b=0.08:1a=0.04:1b=0.08:2a=0.04:2b=0.08",
+  "grade": "curves=master='0/0 0.25/0.30 0.5/0.57 0.75/0.82 1/1',colorbalance=rs=-0.02:bs=0.02:rm=-0.03:bm=0.02,eq=saturation=1.0,unsharp=5:5:0.8:5:5:0",
+  "sub": "從糖果測試到胸腺研究",
+  "lines": [
+    {
+      "text": "BK 測試",
+      "size": 86,
+      "color": "white",
+      "weight": 800,
+      "gap": 30
+    },
+    {
+      "text": "是怎麼開始的？",
+      "size": 118,
+      "color": "gold",
+      "weight": 900
+    }
+  ],
+  "tag_y": 290
+}

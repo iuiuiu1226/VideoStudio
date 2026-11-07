@@ -64,10 +64,14 @@ def main():
     ap.add_argument("--src", required=True)
     ap.add_argument("--font", required=True)
     ap.add_argument("-o", "--out", required=True)
+    ap.add_argument("--bg", help="已經抓好的背景畫面（1080x1920，grab 的輸出），有給就不再從素材抓；只換標題時不用重新下載原檔")
     args = ap.parse_args()
     cfg = json.load(open(args.config, encoding="utf-8"))
 
-    img = grab(f"{args.src}/{cfg['src']}", cfg["t"], cfg["frame"], cfg.get("grade"), cfg.get("prefilter")).convert("RGBA")
+    if args.bg:
+        img = Image.open(args.bg).convert("RGBA")
+    else:
+        img = grab(f"{args.src}/{cfg['src']}", cfg["t"], cfg["frame"], cfg.get("grade"), cfg.get("prefilter")).convert("RGBA")
     # 馬賽克（例如名牌上的名字）：縮小再用最近點放大回去
     blk = cfg.get("block", 12)
     for x, y, w, h in cfg.get("mosaic", []):
