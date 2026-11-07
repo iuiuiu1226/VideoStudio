@@ -15,6 +15,8 @@
   問題字卡：{"card": "文字", "dur": 秒數}，深色底置中白字、無聲。
   join：跟前一段是同一句話中間的剪接（拿掉停頓、語助詞），聲音前後交疊 0.06 秒淡入淡出，接點不會「喀」一下、背景聲不會跳。
   room：背景聲檔（同一支素材安靜處做的循環檔），pad、hold 補停頓時用它，不用完全無聲。
+  rx：room 接點人聲淡出的秒數（預設 0.015）；fade_in：段落開頭淡入的秒數（預設 0.012）。
+  講者前後字連在一起、沒有安靜處可切時（例如「存在｜對吧」「等於說｜我們」）用 0.03，聽起來像自然收尾／開口，不會「喀」一下。
   overlay 是疊在畫面上的透明動畫檔（例如 qtrle 含 alpha 的 .mov），從該 clip 開頭對齊，疊在字幕底下。
   style.shift_y（或 clip 的 shift_y）把畫面往下移幾個像素，頂端用鏡像模糊補：IG Reels 上方介面（含模糊底）會蓋住畫面頂端約 270 px，
   標題放在那下面（y 288 起），人物頭頂太高的影片要讓出空間。
@@ -246,7 +248,7 @@ def main():
                 fade_out = f",afade=t=out:st={speech + xj_in - AFADE_OUT:.4f}:d={AFADE_OUT}"
             af = ("aformat=sample_fmts=fltp,pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
                   f"highpass=f=80,volume={gain:.2f}dB,{ride}"
-                  + ("" if xj_in else f"afade=t=in:d={AFADE},") + "anull" + fade_out)
+                  + ("" if xj_in else f"afade=t=in:d={c.get('fade_in', AFADE)},") + "anull" + fade_out)
             for s, e, text in c.get("subs", []):
                 events.append((t0 + s, t0 + min(e, dur), text, "Default"))
             # 特效字（搞笑字卡、圖示）：[開始, 結束, 文字]，時間是素材秒數；文字可含 ASS 標籤（位置、動畫）
@@ -280,12 +282,14 @@ def main():
             room = None
             la = dur
         if room:
-            # 人聲最後 RX 秒淡出、背景聲淡入疊上去（出點本來就切在安靜處，淡掉的是空氣聲，不會吃到字）
+            # 人聲最後 RX 秒淡出、背景聲淡入疊上去（出點本來就切在安靜處，淡掉的是空氣聲，不會吃到字）；
+            # "rx" 可逐段改：講者字尾直接連到下一個字、沒有安靜處可切時（例如「存在｜對吧」），淡出長一點（0.03）聽起來像自然收尾
+            rx = c.get("rx", RX)
             chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=duration={speech + xj_in:.4f},"
-                          f"asetpts=PTS-STARTPTS,afade=t=out:st={speech + xj_in - RX:.4f}:d={RX}[s{i}]")
-            dl = int(round((speech + xj_in - RX) * 1000))
-            chains.append(f"[{ri}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=duration={pad + hold + RX:.4f},"
-                          f"asetpts=PTS-STARTPTS,afade=t=in:d={RX},adelay={dl}|{dl}[r{i}]")
+                          f"asetpts=PTS-STARTPTS,afade=t=out:st={speech + xj_in - rx:.4f}:d={rx}[s{i}]")
+            dl = int(round((speech + xj_in - rx) * 1000))
+            chains.append(f"[{ri}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=duration={pad + hold + rx:.4f},"
+                          f"asetpts=PTS-STARTPTS,afade=t=in:d={rx},adelay={dl}|{dl}[r{i}]")
             chains.append(f"[s{i}][r{i}]amix=inputs=2:duration=longest:normalize=0,atrim=duration={la:.4f},{af}[a{i}]")
         else:
             chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
