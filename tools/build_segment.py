@@ -9,7 +9,7 @@
   每個 clip 指定 src、in、out（秒）、zoom（1.0 = 原始畫面），
   subs 是字幕列表，時間以「該 clip 的 in 點」為 0。
   frame 是固定裁切框；frame_keys 是逐格裁切框（t 為素材秒數，之間線性內插）；
-  v_in 讓畫面取自另一個時間點（聲音仍從 in 開始）。
+  v_in 讓畫面取自另一個時間點（聲音仍從 in 開始）；v_speed 讓畫面慢動作（聲音照常）。
   fx 是特效字（亮黃粗體、置中對齊，位置與動畫用 ASS 標籤寫在文字裡），時間是素材秒數。
   gain_keys 是段落內的音量曲線（t 為素材秒數、db 為增益）；style.loudness = "linear" 時整支只做固定增益＋限幅。
   問題字卡：{"card": "文字", "dur": 秒數}，深色底置中白字、無聲。
@@ -267,16 +267,22 @@ def main():
             else:
                 spans.append([t0, t0 + dur])
         hold_vf = f",tpad=stop_mode=clone:stop_duration={hold:.4f}" if hold > 0 else ""
+        # v_speed：畫面慢動作（例如 0.75＝放慢到 3/4），聲音照常；台下回答、字幕要多停一下時用，
+        # 搭配 v_in 從前面一點開始，讓慢動作的畫面剛好接到下一段的開頭（不會倒回去重播）
+        vs = c.get("v_speed")
+        # 慢動作用動態補格（minterpolate），不然每 4 格重複 1 格，手在動時看起來一頓一頓的
+        vpre = (f"setpts=(PTS-STARTPTS)/{vs},minterpolate=fps={FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1"
+                if vs else f"fps={FPS}")
         if c.get("overlay"):
             # 透明動畫疊加層（穿插的圖卡、標籤），對齊這段開頭
             inputs += ["-i", c["overlay"]]
             oi = n_in
             n_in += 1
-            chains.append(f"[{vi}:v]fps={FPS},trim=duration={body:.4f},setpts=PTS-STARTPTS,{vf}{hold_vf}[b{i}]")
+            chains.append(f"[{vi}:v]{vpre},trim=duration={body:.4f},setpts=PTS-STARTPTS,{vf}{hold_vf}[b{i}]")
             chains.append(f"[{oi}:v]fps={FPS},trim=duration={dur:.4f},setpts=PTS-STARTPTS,format=rgba[o{i}]")
             chains.append(f"[b{i}][o{i}]overlay=0:0:eof_action=pass,format=yuv420p[v{i}]")
         else:
-            chains.append(f"[{vi}:v]fps={FPS},trim=duration={body:.4f},setpts=PTS-STARTPTS,{vf}{hold_vf}[v{i}]")
+            chains.append(f"[{vi}:v]{vpre},trim=duration={body:.4f},setpts=PTS-STARTPTS,{vf}{hold_vf}[v{i}]")
         if "card" in c:
             xj_in = xj_out = 0.0
             room = None

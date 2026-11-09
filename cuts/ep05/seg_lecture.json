@@ -208,12 +208,14 @@
       "subs": [
         [
           0.0,
-          1.13,
+          1.55,
           "學員的回答：下"
         ]
       ],
       "shift_y": 120,
-      "pad": 0.45,
+      "pad": 0.87,
+      "v_in": 281.26,
+      "v_speed": 0.75,
       "room": "room_00EE_3.wav",
       "auto_gain": false,
       "gain_db": 15.2,
