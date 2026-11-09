@@ -9,7 +9,7 @@
   每個 clip 指定 src、in、out（秒）、zoom（1.0 = 原始畫面），
   subs 是字幕列表，時間以「該 clip 的 in 點」為 0。
   frame 是固定裁切框；frame_keys 是逐格裁切框（t 為素材秒數，之間線性內插）；
-  v_in 讓畫面取自另一個時間點（聲音仍從 in 開始）；v_speed 讓畫面慢動作（聲音照常）。
+  v_in 讓畫面取自另一個時間點（聲音仍從 in 開始）；v_speed 讓畫面慢動作（聲音照常）；speed 讓整段（畫面＋聲音）放慢，音高不變。
   fx 是特效字（亮黃粗體、置中對齊，位置與動畫用 ASS 標籤寫在文字裡），時間是素材秒數。
   gain_keys 是段落內的音量曲線（t 為素材秒數、db 為增益）；style.loudness = "linear" 時整支只做固定增益＋限幅。
   問題字卡：{"card": "文字", "dur": 秒數}，深色底置中白字、無聲。
@@ -154,7 +154,8 @@ def main():
     xjs = []  # 每段聲音前後多拿的秒數
 
     for i, c in enumerate(clips):
-        raw = c["dur"] if "card" in c else c["out"] - c["in"]
+        sp = c.get("speed")   # speed：這段整段放慢（例如 0.82），畫面補格、聲音用 atempo 拉長（音高不變；rubberband 在這種有雜音的人聲會糊掉，轉錄聽不出字）
+        raw = c["dur"] if "card" in c else (c["out"] - c["in"]) / (sp or 1.0)
         dur = round(raw * FPS) / FPS
         # hold：結尾停格幾秒、聲音補靜音（下一段要交叉淡化、但這段講到最後一刻時，用來留出淡化的空白）
         body = dur
@@ -270,10 +271,12 @@ def main():
         hold_vf = f",tpad=stop_mode=clone:stop_duration={hold:.4f}" if hold > 0 else ""
         # v_speed：畫面慢動作（例如 0.75＝放慢到 3/4），聲音照常；台下回答、字幕要多停一下時用，
         # 搭配 v_in 從前面一點開始，讓慢動作的畫面剛好接到下一段的開頭（不會倒回去重播）
-        vs = c.get("v_speed")
+        vs = c.get("v_speed") or sp
         # 慢動作用動態補格（minterpolate），不然每 4 格重複 1 格，手在動時看起來一頓一頓的
         vpre = (f"setpts=(PTS-STARTPTS)/{vs},minterpolate=fps={FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1"
                 if vs else f"fps={FPS}")
+        stretch = (f"atrim=duration={c['out'] - c['in']:.4f},asetpts=PTS-STARTPTS,atempo={sp},"
+                   if sp and "card" not in c else "")
         if c.get("overlay"):
             # 透明動畫疊加層（穿插的圖卡、標籤），對齊這段開頭
             inputs += ["-i", c["overlay"]]
@@ -292,14 +295,14 @@ def main():
             # 人聲最後 RX 秒淡出、背景聲淡入疊上去（出點本來就切在安靜處，淡掉的是空氣聲，不會吃到字）；
             # "rx" 可逐段改：講者字尾直接連到下一個字、沒有安靜處可切時（例如「存在｜對吧」），淡出長一點（0.03）聽起來像自然收尾
             rx = c.get("rx", RX)
-            chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=duration={speech + xj_in:.4f},"
+            chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,{stretch}atrim=duration={speech + xj_in:.4f},"
                           f"asetpts=PTS-STARTPTS,afade=t=out:st={speech + xj_in - rx:.4f}:d={rx}[s{i}]")
             dl = int(round((speech + xj_in - rx) * 1000))
             chains.append(f"[{ri}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=duration={pad + hold + rx:.4f},"
                           f"asetpts=PTS-STARTPTS,afade=t=in:d={rx},adelay={dl}|{dl}[r{i}]")
             chains.append(f"[s{i}][r{i}]amix=inputs=2:duration=longest:normalize=0,atrim=duration={la:.4f},{af}[a{i}]")
         else:
-            chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,"
+            chains.append(f"[{ai}:a]aresample=48000,aformat=channel_layouts=stereo,{stretch}"
                           f"atrim=duration={min(speech + xj_in + xj_out, la):.4f},apad,atrim=duration={la:.4f},"
                           f"asetpts=PTS-STARTPTS,{af}[a{i}]")
         xjs.append((xj_in, xj_out))
