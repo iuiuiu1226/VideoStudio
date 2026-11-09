@@ -16,6 +16,7 @@
   join：跟前一段是同一句話中間的剪接（拿掉停頓、語助詞），聲音前後交疊 0.06 秒淡入淡出，接點不會「喀」一下、背景聲不會跳。
   room：背景聲檔（同一支素材安靜處做的循環檔），pad、hold 補停頓時用它，不用完全無聲。
   rx：room 接點人聲淡出的秒數（預設 0.015）；fade_in：段落開頭淡入的秒數（預設 0.012）。
+  af：這段額外的聲音濾鏡（ffmpeg 字串），例如 "highpass=f=160" 去掉冷氣的低頻嗡嗡聲（女聲基頻約 200 Hz，不受影響）。
   講者前後字連在一起、沒有安靜處可切時（例如「存在｜對吧」「等於說｜我們」）用 0.03，聽起來像自然收尾／開口，不會「喀」一下。
   overlay 是疊在畫面上的透明動畫檔（例如 qtrle 含 alpha 的 .mov），從該 clip 開頭對齊，疊在字幕底下。
   style.shift_y（或 clip 的 shift_y）把畫面往下移幾個像素，頂端用鏡像模糊補：IG Reels 上方介面（含模糊底）會蓋住畫面頂端約 270 px，
@@ -247,7 +248,7 @@ def main():
             else:
                 fade_out = f",afade=t=out:st={speech + xj_in - AFADE_OUT:.4f}:d={AFADE_OUT}"
             af = ("aformat=sample_fmts=fltp,pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,"
-                  f"highpass=f=80,volume={gain:.2f}dB,{ride}"
+                  f"highpass=f=80,{c['af'] + ',' if c.get('af') else ''}volume={gain:.2f}dB,{ride}"
                   + ("" if xj_in else f"afade=t=in:d={c.get('fade_in', AFADE)},") + "anull" + fade_out)
             for s, e, text in c.get("subs", []):
                 events.append((t0 + s, t0 + min(e, dur), text, "Default"))
