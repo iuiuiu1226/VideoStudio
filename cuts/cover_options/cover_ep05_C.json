@@ -1,17 +1,17 @@
 {
   "src": "copy_00EE_4k.mov",
-  "t": 317.88,
+  "t": 28.68,
   "frame": {
-    "x": 472,
-    "y": 0,
-    "w": 1688,
-    "h": 3000
+    "x": 524,
+    "y": 65,
+    "w": 1636,
+    "h": 2909
   },
   "series": "BK 測試｜課堂精華",
   "logo": "assets/logo.png",
   "quote_top": 990,
   "prefilter": "atadenoise=s=9:0a=0.04:0b=0.08:1a=0.04:1b=0.08:2a=0.04:2b=0.08",
-  "grade": "curves=master='0/0 0.25/0.30 0.5/0.57 0.75/0.82 1/1',colorbalance=rs=-0.02:bs=0.02:rm=-0.03:bm=0.02,eq=saturation=1.0,unsharp=5:5:0.8:5:5:0",
+  "grade": "curves=master='0/0 0.25/0.33 0.5/0.62 0.75/0.85 1/1',colorbalance=rs=0.0:bs=0.0:rm=0.01:bm=-0.01,eq=saturation=1.03,unsharp=5:5:0.8:5:5:0",
   "sub": "行為也伴隨著能量",
   "lines": [
     {
@@ -30,10 +30,10 @@
   ],
   "mosaic": [
     [
-      500,
-      1466,
-      82,
-      58
+      452,
+      1348,
+      58,
+      100
     ]
   ]
 }
