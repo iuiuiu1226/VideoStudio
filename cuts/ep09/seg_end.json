@@ -14,7 +14,7 @@
       "id": "#endcard",
       "src": "output/endcard.mp4",
       "in": 0.0,
-      "out": 7.0,
+      "out": 6.0,
       "no_overlay": true,
       "xfade": 1.0
     }
