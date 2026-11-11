@@ -548,6 +548,8 @@ id `1qbEVfFiV1rZtoYsRu4bwbXyBLR-z5-Nm`，5 分 38 秒、2160x3840 HDR 30 格，�
 
 ## 編號 6「糖果測試：BK 一開始做的研究」（IMG_9802）
 
+配樂：使用者 2026/11/11 說自己處理好了（我們這邊不加配樂）。
+
 使用者要「以 copy_2524 的概念作為範本（這一版是我剪輯的）」，先剪＋字幕，其他不用。
 - 素材 `IMG_9802.MOV`（雲端素材資料夾，id `1jK9uAhj5-gBR_HVyqbXMN_NAFMZuRQxS`，4 分 19 秒，3840x2160 旋轉、HDR、59.94 格）；
   範本 `copy_2524F272-…mov`（id `1alCDS9tFdTixogPfMSA1kqIKgyKrMOHa`，75 秒，使用者自己剪的同一支，有字幕、
