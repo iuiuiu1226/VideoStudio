@@ -66,6 +66,28 @@ CLIPS = [
 ]
 
 
+# 試剪版（使用者 2026/11/14 自己整理的腳本，只用安和老師原本講的話，沒有旁白、動畫）：
+#   BK 就是 Behavioral Kinesiology…簡稱 BK → 從預防醫學發展出來的 → 它可以幫我們做很多有趣的事情
+#   → 這是當時國際預防醫學學會的 John Diamond 鑽石博士，閃閃發光的一個人 → 他們就發現…胸腺擴張，免疫荷爾蒙分泌增加
+#   → 所以他們有很多實際的案例 → 連日光燈都是有能量的，也都會影響你的健康
+# 剪接點都接起來轉錄確認過：8498 開頭「從」是錄影一開始就在講（第一個字可能不完整）；8495 16.95 起（前面「嗯」不放）；
+# 「實際的案例」後面「今天這教室感覺可以」不放；「連……日光燈」中間 1.8 秒的停頓縮短
+TRIAL = [
+    ("T1 是什麼", "IMG_8495.MOV", 5.30, 14.84, [(5.48, 8.40, "BK 就是\\NBehavioral Kinesiology"), (8.45, 10.82, "一種行為上的肌肉動力學"),
+                                              (10.82, 12.30, "就是它原本的學名"), (12.34, 14.90, "它簡稱 BK")], None,
+     {"pad": 0.25, "room": "room_IMG_8495.wav"}),
+    ("T2 預防醫學", "IMG_8498.MOV", 0.00, 1.44, [(0.00, 1.55, "從預防醫學發展出來的")], None, {"pad": 0.25, "room": "room_IMG_8498.wav"}),
+    ("T3 有趣", "IMG_8495.MOV", 16.95, 19.25, [(17.05, 19.30, "它可以幫我們做很多有趣的事情")], None, {"pad": 0.35, "room": "room_IMG_8495.wav"}),
+    ("T4 鑽石博士", "IMG_8498.MOV", 100.15, 108.40, [(100.31, 103.95, "這是當時這個\\N國際預防醫學學會"), (104.00, 106.65, "John Diamond\\N鑽石博士"),
+                                                (106.67, 108.45, "閃閃發光的一個人")], None, {"pad": 0.3, "room": "room_IMG_8498.wav"}),
+    ("T5 胸腺", "IMG_8498.MOV", 110.88, 121.00, [(110.92, 112.45, "他們就發現"), (112.50, 114.75, "就是剛剛大家那個現象"),
+                                             (114.85, 119.00, "胸腺擴張\\N免疫荷爾蒙分泌增加"), (119.08, 121.05, "所以他們有很多實際的案例")], None,
+     {"pad": 0.3, "room": "room_IMG_8498.wav"}),
+    ("T6 日光燈", "IMG_8498.MOV", 126.45, 127.20, [(126.50, 127.20, "連日光燈都是有能量的")], None, {}),   # 126.45：前面 125.85–126.27 是「感覺可以」的尾巴
+    ("T6-2", "IMG_8498.MOV", 128.40, 132.72, [(128.40, 131.05, "連日光燈都是有能量的"), (131.10, 132.85, "也都會影響你的健康")], None,
+     {"join": True, "hold": 2.0, "rx": 0.06, "room": "room_IMG_8498.wav"}),
+]
+
 # 主持人（IMG_8493）名牌打碼：人工標框（N93 入點後第幾格, x0, y0, x1, y1），中間逐格內插；最後一格之後（停格＋交叉淡化進片尾）沿用最後的框
 BADGE = [(0, 458, 1073, 534, 1160), (15, 493, 1073, 572, 1160), (30, 483, 1083, 557, 1162), (45, 463, 1063, 542, 1142),
          (60, 453, 1048, 532, 1137), (75, 438, 1043, 522, 1132), (90, 458, 1053, 527, 1137), (105, 478, 1073, 542, 1152),
@@ -91,17 +113,18 @@ def badge_boxes(main, fps=30):
     return boxes, t0
 
 
-def build():
+def build(clips=None):
+    clips = CLIPS if clips is None else clips
     main = []
-    for k, (cid, src, a, b, subs, lab, extra) in enumerate(CLIPS):
+    for k, (cid, src, a, b, subs, lab, extra) in enumerate(clips):
         tail = extra.get("pad", 0.0) + extra.get("hold", 0.0)
         s = [[round(max(t, a) - a, 2), round(min(e, b + tail) - a, 2), txt] for t, e, txt in subs if e > a and t < b + tail]
         c = {"id": f"#{cid}", "src": src, "in": a, "out": b, "subs": s}
         c.update({kk: v for kk, v in extra.items() if kk != "fx"})
         fx = list(extra.get("fx", []))
         if lab:
-            first = k == 0 or CLIPS[k - 1][5] != lab
-            last = k == len(CLIPS) - 1 or CLIPS[k + 1][5] != lab
+            first = k == 0 or clips[k - 1][5] != lab
+            last = k == len(clips) - 1 or clips[k + 1][5] != lab
             fx.append([a, b + tail, LABEL % (300 if first else 0, 300 if last else 0) + lab])
         if fx:
             c["fx"] = fx
@@ -117,6 +140,8 @@ if __name__ == "__main__":
     json.dump({"name": "片尾", "style": STYLE,
                "clips": [{"id": "#endcard", "src": "output/endcard.mp4", "in": 0.0, "out": 6.0, "no_overlay": True, "xfade": 1.0}]},
               open(os.path.join(OUT, "seg_end.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    json.dump({"name": "編號 10 試剪版（使用者的腳本）", "style": STYLE, "clips": build(TRIAL)},
+              open(os.path.join(OUT, "seg_trial.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     bx, f0 = badge_boxes(main)
     json.dump({"boxes": bx}, open(os.path.join(OUT, "badge_mosaic.json"), "w"))
     print("主持人名牌打碼：第", f0, "格起，共", sum(1 for b in bx if b), "格")
