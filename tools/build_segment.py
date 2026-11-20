@@ -275,6 +275,10 @@ def main():
         # 慢動作用動態補格（minterpolate），不然每 4 格重複 1 格，手在動時看起來一頓一頓的
         vpre = (f"setpts=(PTS-STARTPTS)/{vs},minterpolate=fps={FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1"
                 if vs else f"fps={FPS}")
+        # 素材本身比「出點＋pad」短時（例如自製動畫、合成的工作檔剛好到出點就結束），最後一格延長補滿 pad，
+        # 不然這段畫面會比聲音短，後面的交叉淡化時間點全部對不上（畫面提早結束）
+        if pad > 0 and "card" not in c:
+            vpre += f",tpad=stop_mode=clone:stop_duration={pad + 0.1:.4f}"
         stretch = (f"atrim=duration={c['out'] - c['in']:.4f},asetpts=PTS-STARTPTS,atempo={sp},"
                    if sp and "card" not in c else "")
         if c.get("overlay"):

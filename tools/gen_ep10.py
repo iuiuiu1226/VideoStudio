@@ -12,7 +12,7 @@
 結構：開頭（旁白拋問題）→ BK 是什麼？ → 從哪裡來？ → 怎麼測？ → 測的是什麼？ → 主持人「要正向地懷疑」→ 片尾
 說法照編號 4 的原則：旁白只講事實、用中性寫法，不寫成「證明」或醫療功效（README「BK 背景資料」）。
 
-用法：python3 tools/gen_ep10.py → cuts/ep10/seg_main.json、seg_end.json、badge_mosaic.json
+用法：python3 tools/gen_ep10.py → cuts/ep10/seg_main.json、seg_end.json、badge_mosaic.json（第二版 seg_v2.json、badge_mosaic_v2.json）
       python3 tools/build_segment.py cuts/ep10/seg_main.json cuts/ep10/seg_end.json --src <ep10/px> --font <字型資料夾> -o output/10_….mp4
 """
 import json
@@ -103,6 +103,50 @@ TRIAL2 = TRIAL[:3] + [
                                              (119.08, 121.05, "所以他們有很多實際的案例")], None, {"pad": 0.3, "room": "room_IMG_8498.wav"}),
 ] + TRIAL[5:]
 
+# 第二版「BK 為什麼會出現」（使用者 2026/11/20 同意的結構：重點放在 BK 是預防醫學的醫生想在生病前找出什麼對身體好）
+#   ① 鉤子：老師「你只要生病，看醫生都來不及了」＋金色問句「一定要等生病才看醫生嗎？」→「預防醫學的醫生就是，可不可以不要那麼常跑醫院」
+#   ② 時間軸動畫（旁白先用字幕）→ 鑽石博士 → 書封 → ③ 老師「BK 就是 Behavioral Kinesiology…它簡稱 BK」
+#   ④ 糖果測試：「BK 這群研究者最早就是研究吃糖」（IMG_8496）→「人產生兩種反應…撐住…掉下去」（畫面換成手臂真的撐住、掉下去）
+#      →「就跟胸腺有關」（胸腺位置小卡）→「會讓你的胸腺萎縮…你就比較容易生病」（小卡上的亮點縮小變灰）
+#   ⑤「連日光燈都是有能量的，也都會影響你的健康」→ 主持人「不要急著相信，也不要急著否定」→ 片尾
+# 剪接點都接起來轉錄確認過：8498「不然」不放、從「你只要」（67.18）開始，「了」講到約 69.95；「院」講到 66.10；
+# 8496「所以」約 51.0 開口、「吃糖」講到 54.36（「吃糖」講得含糊，轉錄常聽成「痴談」，字幕照講的意思寫）；
+# 8497「會讓你的胸腺萎縮」24.98 開口；「分泌減少」重複講了兩次，拿掉第二次（31.80–33.62，「免」33.7 開口）；「生病」講到 36.30；
+# 「所以他們有很多實際的案例」轉錄一直聽成「上面有很多…」，這版不放（提案的結構本來就沒有這句）
+HOOK = r"{\an5\pos(540,1440)\fs108\b1\c&H5AB4D9&\3c&H140F0B&\bord7\shad0\fad(250,300)}"
+V2 = [
+    ("H1 開頭", "IMG_8498.MOV", 67.18, 69.95, [(67.22, 70.20, "你只要生病\\N看醫生都來不及了")], None,
+     {"pad": 0.3, "room": "room_IMG_8498.wav", "fx": [[67.18, 70.25, HOOK + "一定要等生病\\N才看醫生嗎？"]]}),
+    ("H2 預防醫學", "IMG_8498.MOV", 61.20, 66.14, [(61.42, 63.30, "預防醫學的醫生就是"), (63.40, 66.40, "可不可以不要那麼常跑醫院")], None,
+     {"pad": 0.65, "room": "room_IMG_8498.wav"}),   # 「忍到」聽不清楚，字幕不寫；pad 0.65 裡最後 0.4 秒跟動畫交叉淡化
+    ("V2 時間軸", "work/ep10_anim/timeline_v2.mp4", 0.0, 7.60, [(0.25, 3.45, "1960 年代，有醫生\\N用壓手臂看肌肉的力氣"),
+                                                            (3.60, 7.30, "後來，預防醫學的醫生\\N用它找出什麼對身體好")],
+     None, {"auto_gain": False, "xfade": 0.4}),
+    ("N98b 鑽石博士", "IMG_8498.MOV", 100.15, 106.69, [(100.31, 103.95, "這是當時這個\\N國際預防醫學學會"), (104.00, 106.90, "John Diamond\\N鑽石博士")],
+     None, {"pad": 0.45, "room": "room_IMG_8498.wav", "xfade": 0.4}),
+    ("V3 書封", "work/ep10_anim/book.mp4", 0.0, 3.93, [(0.10, 2.75, "這本是他第一本出的書"), (2.80, 4.20, "就是叫 BK")],
+     None, {"pad": 0.6, "room": "room_IMG_8498.wav", "xfade": 0.3}),
+    ("N95 是什麼", "IMG_8495.MOV", 5.30, 14.84, [(5.48, 8.40, "BK 就是\\NBehavioral Kinesiology"), (8.45, 10.82, "一種行為上的肌肉動力學"),
+                                               (10.82, 12.30, "就是它原本的學名"), (12.34, 14.90, "它簡稱 BK")],
+     None, {"pad": 0.3, "room": "room_IMG_8495.wav", "xfade": 0.3}),
+    ("D0 吃糖", "IMG_8496.MOV", 50.85, 54.45, [(51.00, 52.42, "所以 BK 這群研究者"), (52.42, 54.62, "最早就是研究吃糖")],
+     None, {"pad": 0.3, "room": "room_IMG_8496.wav"}),
+    # demo.mp4＝IMG_8497 5.10–19.58 的原音（字幕秒數＝素材秒數－5.10），撐住／掉下去換成糖果測試的畫面（tools/ep10_anim.py --v2）
+    ("D1 兩種反應", "work/ep10_anim/demo.mp4", 0.0, 14.48, [(0.02, 2.25, "人產生兩種反應"), (2.72, 5.36, "一種東西放到嘴巴裡\\N你的肌肉會撐住"),
+                                                       (5.38, 7.43, "一種是會掉下去"), (7.90, 9.36, "那什麼意思呢？"),
+                                                       (9.38, 11.10, "就跟胸腺有關"), (11.88, 14.70, "胸腺是管免疫力荷爾蒙\\N分泌的")],
+     None, {"pad": 0.3, "room": "room_IMG_8497.wav", "overlay": "work/ep10_anim/thymus_a.mov"}),
+    ("D3a 萎縮", "IMG_8497.MOV", 24.90, 31.80, [(24.98, 28.72, "會讓你的胸腺萎縮的"), (28.74, 31.80, "就會讓你的免疫力\\N荷爾蒙分泌減少")],
+     None, {"overlay": "work/ep10_anim/thymus_b.mov"}),
+    ("D3b 生病", "IMG_8497.MOV", 33.62, 36.32, [(33.66, 36.55, "免疫力就會下降\\N你就比較容易生病")],
+     None, {"join": True, "pad": 0.4, "room": "room_IMG_8497.wav"}),
+    ("T6 日光燈", "IMG_8498.MOV", 126.45, 127.20, [(126.50, 127.20, "連日光燈都是有能量的")], None, {}),
+    ("T6-2", "IMG_8498.MOV", 128.40, 132.72, [(128.40, 131.05, "連日光燈都是有能量的"), (131.10, 132.95, "也都會影響你的健康")], None,
+     {"join": True, "pad": 0.5, "room": "room_IMG_8498.wav"}),
+    ("N93 結尾", "IMG_8493.MOV", 0.0, 5.28, [(0.0, 3.05, "我們不要急著相信\\N但是也不要急著否定"), (3.10, 5.45, "我們要正向地懷疑")],
+     None, {"hold": 2.0, "rx": 0.06, "room": "room_IMG_8493.wav"}),
+]
+
 # 主持人（IMG_8493）名牌打碼：人工標框（N93 入點後第幾格, x0, y0, x1, y1），中間逐格內插；最後一格之後（停格＋交叉淡化進片尾）沿用最後的框
 BADGE = [(0, 458, 1073, 534, 1160), (15, 493, 1073, 572, 1160), (30, 483, 1083, 557, 1162), (45, 463, 1063, 542, 1142),
          (60, 453, 1048, 532, 1137), (75, 438, 1043, 522, 1132), (90, 458, 1053, 527, 1137), (105, 478, 1073, 542, 1152),
@@ -159,9 +203,19 @@ if __name__ == "__main__":
               open(os.path.join(OUT, "seg_trial.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     json.dump({"name": "編號 10 試剪第二版（使用者的腳本）", "style": STYLE, "clips": build(TRIAL2)},
               open(os.path.join(OUT, "seg_trial2.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    v2 = build(V2)
+    json.dump({"name": "編號 10 第二版 BK 為什麼會出現", "style": STYLE, "clips": v2},
+              open(os.path.join(OUT, "seg_v2.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     bx, f0 = badge_boxes(main)
     json.dump({"boxes": bx}, open(os.path.join(OUT, "badge_mosaic.json"), "w"))
     print("主持人名牌打碼：第", f0, "格起，共", sum(1 for b in bx if b), "格")
+    bx, f0 = badge_boxes(v2)
+    json.dump({"boxes": bx}, open(os.path.join(OUT, "badge_mosaic_v2.json"), "w"))
+    print("第二版主持人名牌打碼：第", f0, "格起")
+    t = 0.0
+    for c in v2:
+        t += round((c["out"] - c["in"]) * 30) / 30 + round(c.get("pad", 0) * 30) / 30 + round(c.get("hold", 0) * 30) / 30 - c.get("xfade", 0)
+    print("第二版主段落", round(t, 1), "秒＋片尾 5 秒＝", round(t + 5, 1), "秒；片段", len(v2))
     t = 0.0
     for c in main:
         t += round((c["out"] - c["in"]) * 30) / 30 + round(c.get("pad", 0) * 30) / 30 + round(c.get("hold", 0) * 30) / 30 - c.get("xfade", 0)

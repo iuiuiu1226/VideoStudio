@@ -4,6 +4,13 @@
 timeline.mp4：「從哪裡來」的時間軸，配合旁白（目前還沒配音，旁白先用字幕代替，秒數照預估的配音長度）
   1960 年代｜應用肌動學（壓手臂，看肌肉的力氣）→ 線往下長 → 1970 年代｜預防醫學的醫生（加進情緒、心理的因素）
   書（《BK》1979）不放在動畫裡：講師下一段自己會講，畫面是講師投影片上的書封（真的照片）
+第二版（「BK 為什麼會出現」，--v2 --px <工作檔資料夾>）另外輸出：
+  timeline_v2.mp4：第二個節點的說明改成「在生病之前預防」（旁白講預防醫學的醫生想找出什麼對身體好）
+  demo.mp4：安和老師「人產生兩種反應…撐住…掉下去…胸腺是管免疫力荷爾蒙分泌的」（IMG_8497 5.10–19.58 的原音），
+    講到「撐住」「掉下去」時畫面換成糖果測試（IMG_8496）手臂真的撐住、真的掉下去的那幾秒（動作對在講到那個詞的時候）
+  thymus_a.mov／thymus_b.mov：胸腺位置小卡（透明疊加層，字幕下方、不擋臉）：上半身剪影＋胸口金色亮點＋「胸腺」；
+    a 疊在 demo.mp4（講到「胸腺有關」出現、到結尾不收），b 疊在下一段「會讓你的胸腺萎縮」（一開始就在，
+    講到「萎縮」金色亮點縮小變灰，「分泌減少」講完收掉）；a、b 卡片位置一樣，接起來看起來是同一張
 版面：時間軸在 y 480–1110（系列標題下面、字幕上面）；字幕在胸口高度、段落標籤 y 1350 由 build_segment 疊上去。
 聲音：無聲（之後配旁白時，旁白另外混進來）。
 
@@ -52,7 +59,11 @@ def main():
     ap.add_argument("--book-t", type=float, default=104.6, help="投影片上書封拍得最完整的那一格（素材秒數）")
     ap.add_argument("--a-in", type=float, default=134.00)
     ap.add_argument("--a-out", type=float, default=137.95)
+    ap.add_argument("--v2", action="store_true", help="第二版的 timeline_v2、demo、thymus_a／b")
+    ap.add_argument("--px", default="", help="--v2 用：工作檔資料夾（IMG_8497.MOV、IMG_8496.MOV）")
     args = ap.parse_args()
+    if args.v2:
+        NODES[1] = ("1970 年代", "預防醫學的醫生", "在生病之前預防", 880)
     if args.book_src:
         # 書封：IMG_8498 104.6 秒投影片左邊那本《BK》（真的照片，不用網路圖）
         raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{args.book_t}", "-i", args.book_src, "-frames:v", "1",
@@ -124,10 +135,106 @@ def main():
                 book_frame(s).save(os.path.join(args.out, f"preview_book_{s:05.2f}.png"))
         print("預覽：", args.out)
         return
+    if args.v2:
+        write(os.path.join(args.out, "timeline_v2.mp4"), frame, args.dur)
+        demo(args.px, os.path.join(args.out, "demo.mp4"))
+        tf = thymus_frames(F)
+        write_overlay(os.path.join(args.out, "thymus_a.mov"), lambda t: tf(t, appear=DEMO_THYMUS_IN), DEMO_DUR + 0.5)   # 多 0.5 秒蓋過後面的停頓
+        write_overlay(os.path.join(args.out, "thymus_b.mov"),
+                      lambda t: tf(t, appear=None, shrink=(27.20 - 24.90, 28.40 - 24.90), leave=31.80 - 24.90), 31.80 - 24.90)
+        return
     write(os.path.join(args.out, "timeline.mp4"), frame, args.dur)
     if args.book_src:
         write(os.path.join(args.out, "book.mp4"), book_frame, args.a_out - args.a_in,
               audio=(args.book_src, args.a_in, args.a_out))
+
+
+# demo.mp4：聲音是 IMG_8497 5.10–19.58 一整段；畫面四段（素材, 入點, 長度）
+DEMO_A = (5.10, 19.58)
+DEMO_V = [("IMG_8497.MOV", 5.10, 2.65),     # 「人產生兩種反應」講師
+          ("IMG_8496.MOV", 121.75, 2.65),   # 「一種東西放到嘴巴裡你的肌肉會撐住」：講師整個人壓上去，手臂還是撐住（124.1 最用力≈講到「撐住」）
+          ("IMG_8496.MOV", 85.85, 2.60),    # 「一種是會掉下去」：87.3 手臂掉下去≈講到「掉」
+          ("IMG_8497.MOV", 13.00, 6.58)]    # 「那什麼意思呢？就跟胸腺有關。胸腺是管免疫力荷爾蒙分泌的」講師
+DEMO_DUR = DEMO_A[1] - DEMO_A[0]
+DEMO_THYMUS_IN = 15.00 - DEMO_A[0]          # 「就跟胸腺有關」的「胸」（15.04）
+
+
+def demo(px, out):
+    ins, chains = [], []
+    for i, (f, a, d) in enumerate(DEMO_V):
+        ins += ["-ss", f"{a}", "-t", f"{d + 0.2}", "-i", os.path.join(px, f)]
+        chains.append(f"[{i}:v]fps={FPS},trim=duration={d:.4f},setpts=PTS-STARTPTS,format=yuv420p,setsar=1[v{i}]")
+    n = len(DEMO_V)
+    ins += ["-ss", f"{DEMO_A[0]}", "-t", f"{DEMO_DUR + 0.2}", "-i", os.path.join(px, "IMG_8497.MOV")]
+    g = ";".join(chains) + ";" + "".join(f"[v{i}]" for i in range(n)) + f"concat=n={n}:v=1:a=0[v];" \
+        f"[{n}:a]atrim=duration={DEMO_DUR:.4f},asetpts=PTS-STARTPTS[a]"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", *ins, "-filter_complex", g, "-map", "[v]", "-map", "[a]",
+                    "-c:v", "libx264", "-preset", "medium", "-crf", "14", "-pix_fmt", "yuv420p",
+                    "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+                    "-c:a", "aac", "-b:a", "192k", out], check=True)
+    print(out, f"{DEMO_DUR:.2f}s")
+
+
+CARD = (290, 1330, 790, 1620)   # 胸腺小卡：字幕（底邊 y 1260）下面、右側按鈕（x 920）左邊
+GRAYED = (150, 150, 158)
+
+
+def thymus_frames(F):
+    """胸腺小卡（RGBA）：appear＝出現的時間（None＝一開始就在）；shrink＝(開始, 結束) 金色亮點縮小變灰；leave＝開始收掉的時間"""
+    from PIL import ImageFilter
+    x0, y0, x1, y1 = CARD
+    cx, hy, ty = 420, 1408, 1508          # 剪影中線、頭、胸腺的位置
+    f_lab = F(76, 900)
+    mask = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(CARD, 30, fill=255)
+    body = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(body)
+    d.ellipse([cx - 42, hy - 48, cx + 42, hy + 44], fill=(232, 234, 240, 235))           # 頭
+    d.rounded_rectangle([cx - 20, hy + 30, cx + 20, hy + 70], 8, fill=(232, 234, 240, 235))  # 脖子
+    d.rounded_rectangle([cx - 128, hy + 62, cx + 128, y1 + 120], 78, fill=(232, 234, 240, 235))  # 肩膀＋上半身
+    body.putalpha(Image.fromarray(np.minimum(np.array(body.split()[3]), np.array(mask))))
+
+    def fr(t, appear=None, shrink=None, leave=None):
+        a = 1.0 if appear is None else ease((t - appear) / 0.35)
+        if leave is not None:
+            a *= 1 - ease((t - leave) / 0.3)
+        lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        if a <= 0:
+            return lay
+        dy = int((1 - a) * 24)
+        card = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        dc = ImageDraw.Draw(card)
+        dc.rounded_rectangle(CARD, 30, fill=NAVY + (205,), outline=GOLD + (230,), width=4)
+        card.alpha_composite(body)
+        k = 0.0 if shrink is None else ease((t - shrink[0]) / (shrink[1] - shrink[0]))
+        col = tuple(int(g + (q - g) * k) for g, q in zip(GOLD, GRAYED))
+        r = 1.0 - 0.5 * k
+        pulse = 1.0 + 0.08 * np.sin(t * 2 * np.pi / 1.6) * (1 - k)
+        glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(glow).ellipse([cx - 40 * r * pulse, ty - 46 * r * pulse, cx + 40 * r * pulse, ty + 46 * r * pulse],
+                                     fill=GOLD + (int(170 * (1 - k)),))
+        card.alpha_composite(glow.filter(ImageFilter.GaussianBlur(14)))
+        dc = ImageDraw.Draw(card)
+        dc.ellipse([cx - 19 * r, ty - 24 * r, cx + 19 * r, ty + 24 * r], fill=col + (255,))
+        dc.line([(cx + 26, ty), (548, ty)], fill=GOLD + (220,), width=4)
+        dc.text((566, ty), "胸腺", font=f_lab, fill=GOLD + (255,), anchor="lm", stroke_width=2, stroke_fill=NAVY + (255,))
+        al = np.array(card.split()[3]).astype(np.float32) * a
+        card.putalpha(Image.fromarray(al.astype(np.uint8)))
+        lay.alpha_composite(card, (0, dy))
+        return lay
+    return fr
+
+
+def write_overlay(out, frame, dur):
+    """透明疊加層（qtrle，含 alpha），build_segment 的 overlay 用"""
+    n = int(round(dur * FPS))
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{W}x{H}", "-r", str(FPS),
+                          "-i", "-", "-c:v", "qtrle", "-pix_fmt", "argb", out], stdin=subprocess.PIPE)
+    for i in range(n):
+        p.stdin.write(frame(i / FPS).tobytes())
+    p.stdin.close()
+    p.wait()
+    print(out, f"{n / FPS:.2f}s")
 
 
 def write(out, frame, dur, audio=None):
