@@ -18,6 +18,7 @@
   rx：room 接點人聲淡出的秒數（預設 0.015）；fade_in：段落開頭淡入的秒數（預設 0.012）。
   af：這段額外的聲音濾鏡（ffmpeg 字串），例如 "highpass=f=160" 去掉冷氣的低頻嗡嗡聲（女聲基頻約 200 Hz，不受影響）。
   講者前後字連在一起、沒有安靜處可切時（例如「存在｜對吧」「等於說｜我們」）用 0.03，聽起來像自然收尾／開口，不會「喀」一下。
+  fog 是畫面區塊霧化（模糊＋淡化、邊緣漸層），例如前景台下觀眾的頭太明顯時：{"boxes": [[x0, y0, x1, y1], …]}。
   overlay 是疊在畫面上的透明動畫檔（例如 qtrle 含 alpha 的 .mov），從該 clip 開頭對齊，疊在字幕底下。
   style.shift_y（或 clip 的 shift_y）把畫面往下移幾個像素，頂端用鏡像模糊補：IG Reels 上方介面（含模糊底）會蓋住畫面頂端約 270 px，
   標題放在那下面（y 288 起），人物頭頂太高的影片要讓出空間。
@@ -229,6 +230,18 @@ def main():
                 # 底部裁掉 sy，頂端空出的窄條用最上面幾列鏡像＋模糊補上（手機上會在狀態列底下）
                 vf += (f",split[sa{i}][sb{i}];[sb{i}]crop={W}:{sy}:0:0,vflip,gblur=sigma=14[st{i}];"
                        f"[sa{i}]crop={W}:{H - sy}:0:0[sm{i}];[st{i}][sm{i}]vstack")
+            if c.get("fog"):
+                # fog：畫面某些區塊（例如前景台下觀眾的頭）模糊＋淡化，邊緣漸層，讓主角更突出；不是馬賽克。
+                # {"boxes": [[x0, y0, x1, y1], …], "feather": 邊緣漸層寬度（px，預設 80）, "sigma": 模糊程度（預設 22）}
+                # 座標是成片 1080x1920；框是固定的（台下觀眾坐著不動），講者走進框裡也會跟著變柔
+                fg = c["fog"]
+                boxes = ",".join(f"drawbox=x={x0}:y={y0}:w={x1 - x0}:h={y1 - y0}:color=white:t=fill"
+                                 for x0, y0, x1, y1 in fg["boxes"])
+                vf += (f",split[fa{i}][fb{i}];[fb{i}]gblur=sigma={fg.get('sigma', 22)},"
+                       f"eq=brightness=0.05:contrast=0.82:saturation=0.6[fc{i}];"
+                       f"color=c=black:s={W}x{H}:r={FPS}:d={dur + 0.5:.3f},format=yuv420p,{boxes},format=gray,"
+                       f"gblur=sigma={fg.get('feather', 80) / 2}[fm{i}];[fc{i}][fm{i}]alphamerge[fd{i}];"
+                       f"[fa{i}][fd{i}]overlay=0:0:shortest=1,format=yuv420p,setsar=1")
             # 逐段把響度拉到同一基準，不同手機、不同距離錄的人聲才不會忽大忽小
             # "auto_gain": false 時不自動對齊，只用 gain_db／gain_keys（音量曲線已經算好絕對大小時用）
             lufs = measure_lufs(src, c["in"], dur) if c.get("auto_gain", True) and not args.ass_only else None
