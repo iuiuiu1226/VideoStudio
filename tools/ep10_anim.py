@@ -104,14 +104,15 @@ def main():
     f_pill = F(46, 800)
 
     def book_frame(t):
-        """書封放中間（字幕上面），慢慢放大一點；右上角金色「1979」"""
+        """書封放在系列標題和字幕中間（y 約 400–1035，字幕兩行時頂端約 1070，不會擋到書），慢慢放大一點；書的右上方外面金色「1979」
+        （使用者 2026/11/20：原本書太大、下半部被字幕擋住 → 寬 430 改 330、中心 y 780 改 715）"""
         dur = args.a_out - args.a_in
         im = bg.copy().convert("RGBA")
         s = 1.0 + 0.04 * min(t / dur, 1.0)
         a = ease(t / 0.35)
-        w = int(430 * s * (0.94 + 0.06 * a))
+        w = int(330 * s * (0.94 + 0.06 * a))
         h = int(w * cover.height / cover.width)
-        cx, cy = W // 2, 780
+        cx, cy = W // 2, 715
         card = cover.resize((w, h), Image.LANCZOS).convert("RGBA")
         shadow = Image.new("RGBA", (w + 60, h + 60), (0, 0, 0, 0))
         ImageDraw.Draw(shadow).rounded_rectangle([30, 36, w + 30, h + 36], 18, fill=(0, 0, 0, int(150 * a)))
@@ -123,7 +124,7 @@ def main():
         pa = ease((t - 0.5) / 0.4)
         if pa > 0:
             d = ImageDraw.Draw(im)
-            px, py = cx + w // 2 - 20, cy - h // 2 - 6
+            px, py = cx + w // 2 + 104, cy - h // 2 + 40   # 書封右邊外面（文字不壓到書；x 到 900 以內，避開右側按鈕）
             d.rounded_rectangle([px - 90, py - 36, px + 90, py + 36], 36, fill=GOLD + (int(255 * pa),))
             d.text((px, py), "1979", font=f_pill, fill=NAVY + (int(255 * pa),), anchor="mm")
         return im.convert("RGB")
