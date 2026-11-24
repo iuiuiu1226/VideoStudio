@@ -61,6 +61,7 @@ def main():
     ap.add_argument("--a-out", type=float, default=137.95)
     ap.add_argument("--v2", action="store_true", help="第二版的 timeline_v2、demo、thymus_a／b")
     ap.add_argument("--px", default="", help="--v2 用：工作檔資料夾（IMG_8497.MOV、IMG_8496.MOV）")
+    ap.add_argument("--v3", action="store_true", help="第三版的 book_v3（《BK》→ 後來改名《Your Body Doesn't Lie》），要加 --book-src")
     args = ap.parse_args()
     if args.v2:
         NODES[1] = ("1970 年代", "預防醫學的醫生", "在生病之前預防", 880)
@@ -70,6 +71,11 @@ def main():
                               "-vf", "crop=362:684:2:292", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
                              capture_output=True, check=True).stdout
         cover = Image.frombuffer("RGB", (362, 684), raw).copy()
+        # 同一張投影片右邊那本《Your Body Doesn't Lie》（《BK》後來改的書名）
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{args.book_t}", "-i", args.book_src, "-frames:v", "1",
+                              "-vf", "crop=338:592:432:358", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                             capture_output=True, check=True).stdout
+        cover2 = Image.frombuffer("RGB", (338, 592), raw).copy()
     os.makedirs(args.out, exist_ok=True)
     F = L.Fonts(args.font)
     f_year, f_main, f_sub = F(60, 800), F(78, 900), F(44, 500)
@@ -129,12 +135,55 @@ def main():
             d.text((px, py), "1979", font=f_pill, fill=NAVY + (int(255 * pa),), anchor="mm")
         return im.convert("RGB")
 
+    def card(im, img, cx, cy, w, a):
+        """書封＋陰影，中心 (cx, cy)、寬 w、透明度 a"""
+        from PIL import ImageFilter
+        w = int(w)
+        h = int(w * img.height / img.width)
+        sh = Image.new("RGBA", (w + 60, h + 60), (0, 0, 0, 0))
+        ImageDraw.Draw(sh).rounded_rectangle([30, 36, w + 30, h + 36], 18, fill=(0, 0, 0, int(150 * a)))
+        im.alpha_composite(sh.filter(ImageFilter.GaussianBlur(16)), (int(cx - w / 2 - 30), int(cy - h / 2 - 30)))
+        c = img.resize((w, h), Image.LANCZOS).convert("RGBA")
+        c.putalpha(int(255 * a))
+        im.alpha_composite(c, (int(cx - w / 2), int(cy - h / 2)))
+        return h
+
+    BOOK_DUR = args.a_out - args.a_in
+    MOVE_T, MOVE_D = BOOK_DUR + 0.07, 0.7
+
+    def book_v3_frame(t):
+        """第三版：講師講完「這本是他第一本出的書，就是叫 BK」之後，《BK》移到左邊，右邊滑進《Your Body Doesn't Lie》，
+        中間金色箭頭（後來改的書名）；「1979」移到《BK》上方。兩本都在系列標題和字幕中間（y 約 450–980）"""
+        if t < MOVE_T:
+            return book_frame(t)
+        k = ease((t - MOVE_T) / MOVE_D)
+        im = bg.copy().convert("RGBA")
+        w1 = 330 * 1.04 + (280 - 330 * 1.04) * k
+        cx1, cy = 540 + (350 - 540) * k, 715
+        h1 = card(im, cover, cx1, cy, w1, 1.0)
+        card(im, cover2, 900 + (730 - 900) * k, cy, 280, k)
+        d = ImageDraw.Draw(im)
+        if k > 0:                                   # 箭頭：《BK》右邊（x 490）到《Your Body Doesn't Lie》左邊（x 590）中間
+            col = GOLD + (int(255 * k),)
+            d.line([(505, cy), (562, cy)], fill=col, width=9)
+            d.polygon([(578, cy), (556, cy - 18), (556, cy + 18)], fill=col)
+        px0, py0 = 540 + 330 * 1.04 / 2 + 104, cy - int(330 * 1.04 * cover.height / cover.width) / 2 + 40
+        px, py = px0 + (cx1 - px0) * k, py0 + (cy - h1 / 2 - 46 - py0) * k
+        d.rounded_rectangle([px - 90, py - 36, px + 90, py + 36], 36, fill=GOLD + (255,))
+        d.text((px, py), "1979", font=f_pill, fill=NAVY + (255,), anchor="mm")
+        return im.convert("RGB")
+
     if args.preview:
         for s in [float(x) for x in args.preview.split(",")]:
             frame(s).save(os.path.join(args.out, f"preview_{s:05.2f}.png"))
             if args.book_src:
                 book_frame(s).save(os.path.join(args.out, f"preview_book_{s:05.2f}.png"))
+                book_v3_frame(s).save(os.path.join(args.out, f"preview_book3_{s:05.2f}.png"))
         print("預覽：", args.out)
+        return
+    if args.v3:
+        # 聲音：前 3.93 秒是講師原音（IMG_8498 134.00–137.95），後面剪輯時用背景聲補（pad）
+        write(os.path.join(args.out, "book_v3.mp4"), book_v3_frame, BOOK_DUR + 2.8, audio=(args.book_src, args.a_in, args.a_out + 2.8))
         return
     if args.v2:
         write(os.path.join(args.out, "timeline_v2.mp4"), frame, args.dur)
