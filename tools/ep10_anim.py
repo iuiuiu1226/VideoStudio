@@ -62,7 +62,11 @@ def main():
     ap.add_argument("--v2", action="store_true", help="第二版的 timeline_v2、demo、thymus_a／b")
     ap.add_argument("--px", default="", help="--v2 用：工作檔資料夾（IMG_8497.MOV、IMG_8496.MOV）")
     ap.add_argument("--v3", action="store_true", help="第三版的 book_v3（《BK》→ 後來改名《Your Body Doesn't Lie》），要加 --book-src")
+    ap.add_argument("--v3anim", action="store_true", help="第三版旁白段落的動畫：deltoid.mp4、observe.mp4、question.mp4")
     args = ap.parse_args()
+    if args.v3anim:
+        v3_anims(args)
+        return
     if args.v2:
         NODES[1] = ("1970 年代", "預防醫學的醫生", "在生病之前預防", 880)
     if args.book_src:
@@ -197,6 +201,173 @@ def main():
     if args.book_src:
         write(os.path.join(args.out, "book.mp4"), book_frame, args.a_out - args.a_in,
               audio=(args.book_src, args.a_in, args.a_out))
+
+
+# ── 第三版旁白段落的動畫（使用者 2026/11/24：旁白做成動畫比較適合，取代學員練習畫面）──
+# 同一套深藍底＋金色；圖都畫在系列標題和字幕中間（y 約 440–1030）；無聲（之後配旁白再混進來）
+SIL = (232, 234, 240)          # 人形剪影（同胸腺小卡）
+DELTOID_DUR, OBSERVE_DUR, QUESTION_DUR = 3.4, 11.8, 4.6
+CHIPS = ["姿勢", "聲音", "情緒", "穿著", "燈光", "圖像", "表情"]
+SLOTS = [(320, 480), (720, 480), (320, 620), (720, 620), (320, 760), (720, 760), (320, 900), (720, 900)]
+
+
+def figure(d, cx, top, s, arm="up", a=1.0):
+    """正面人形：頭、身體、左手下垂、右手（畫面右邊）平舉（up）或往下掉（down）；回傳 (肩膀, 手) 的位置"""
+    import math
+    c = SIL + (int(235 * a),)
+    hr = 58 * s
+    hy = top + hr
+    d.ellipse([cx - hr, hy - hr, cx + hr, hy + hr], fill=c)
+    d.rounded_rectangle([cx - 22 * s, hy + hr - 10 * s, cx + 22 * s, hy + hr + 40 * s], 8 * s, fill=c)
+    t0 = hy + hr + 30 * s
+    d.rounded_rectangle([cx - 110 * s, t0, cx + 110 * s, t0 + 380 * s], 70 * s, fill=c)
+    d.rounded_rectangle([cx - 160 * s, t0 + 20 * s, cx - 108 * s, t0 + 330 * s], 26 * s, fill=c)
+    sh = (cx + 104 * s, t0 + 48 * s)
+    d.ellipse([sh[0] - 36 * s, sh[1] - 36 * s, sh[0] + 36 * s, sh[1] + 36 * s], fill=c)
+    ln = 300 * s
+    ang = 0 if arm == "up" else math.radians(58)
+    hand = (sh[0] + ln * math.cos(ang), sh[1] + ln * math.sin(ang))
+    d.line([sh, hand], fill=c, width=int(58 * s))
+    d.ellipse([hand[0] - 31 * s, hand[1] - 31 * s, hand[0] + 31 * s, hand[1] + 31 * s], fill=c)
+    return sh, hand
+
+
+def arrow(d, x, y0, y1, col, w=10):
+    """直的箭頭，從 y0 指向 y1"""
+    d.line([(x, y0), (x, y1 - (12 if y1 > y0 else -12))], fill=col, width=w)
+    h = 24 if y1 > y0 else -24
+    d.polygon([(x, y1), (x - 20, y1 - h), (x + 20, y1 - h)], fill=col)
+
+
+def glow(im, cx, cy, r, col, a):
+    from PIL import ImageFilter
+    g = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(g).ellipse([cx - r, cy - r, cx + r, cy + r], fill=col + (int(170 * a),))
+    im.alpha_composite(g.filter(ImageFilter.GaussianBlur(float(r) * 0.4)))
+
+
+def v3_anims(args):
+    os.makedirs(args.out, exist_ok=True)
+    F = L.Fonts(args.font)
+    bg = background()
+    f_lab, f_chip, f_small, f_q = F(70, 900), F(60, 800), F(50, 800), F(82, 900)
+    from life03_anim import pop
+
+    def deltoid(t):
+        """「測試時看的是手臂和肩膀之間的三角肌」：人形手臂平舉 → 肩膀（三角肌）金色亮起＋「三角肌」→ 手腕上方往下壓的箭頭，手臂撐住"""
+        im = bg.copy().convert("RGBA")
+        a = ease((t - 0.1) / 0.35)
+        lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(lay)
+        sh, hand = figure(d, 440, 450, 1.0, "up", a)
+        im.alpha_composite(lay)
+        k = ease((t - 0.6) / 0.4)
+        if k > 0:
+            pulse = 1 + 0.08 * np.sin((t - 0.6) * 2 * np.pi / 1.4)
+            glow(im, sh[0] - 4, sh[1] - 4, 70 * pulse, GOLD, k)
+            d = ImageDraw.Draw(im)
+            d.ellipse([sh[0] - 50, sh[1] - 44, sh[0] + 46, sh[1] + 40], fill=GOLD + (int(255 * k),))
+        k2 = ease((t - 0.9) / 0.4)
+        if k2 > 0:
+            d = ImageDraw.Draw(im)
+            col = GOLD + (int(255 * k2),)
+            # 標籤放在手臂下面（上面留給往下壓的箭頭）
+            d.line([(sh[0] + 14, sh[1] + 42), (sh[0] + 70, sh[1] + 110)], fill=col, width=5)
+            d.text((sh[0] + 82, sh[1] + 110), "三角肌", font=f_lab, fill=col, anchor="lm", stroke_width=2, stroke_fill=NAVY + (255,))
+        k3 = ease((t - 1.6) / 0.3)
+        if k3 > 0:
+            dy = 14 * max(0.0, np.sin((t - 1.6) * 2 * np.pi / 0.9))       # 輕輕往下壓的動作
+            ax = hand[0] - 40
+            arrow(ImageDraw.Draw(im), ax, hand[1] - 150 + dy, hand[1] - 46 + dy, GOLD + (int(255 * k3),))
+        return im.convert("RGB")
+
+    def candy(d, cx, cy, s, col, a):
+        c = col + (int(255 * a),)
+        d.ellipse([cx - 80 * s, cy - 55 * s, cx + 80 * s, cy + 55 * s], fill=c)
+        d.polygon([(cx - 70 * s, cy), (cx - 150 * s, cy - 55 * s), (cx - 150 * s, cy + 55 * s)], fill=c)
+        d.polygon([(cx + 70 * s, cy), (cx + 150 * s, cy - 55 * s), (cx + 150 * s, cy + 55 * s)], fill=c)
+        st = NAVY + (int(110 * a),)
+        d.line([(cx - 28 * s, cy - 50 * s), (cx - 48 * s, cy + 46 * s)], fill=st, width=max(2, int(10 * s)))
+        d.line([(cx + 30 * s, cy - 50 * s), (cx + 10 * s, cy + 46 * s)], fill=st, width=max(2, int(10 * s)))
+
+    def chip(d, cx, cy, text, a, sc=1.0, muted=False):
+        w, h = 340 * sc, 108 * sc
+        edge = (GRAYED if muted else GOLD) + (int(255 * a),)
+        d.rounded_rectangle([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], 28 * sc, fill=(30, 36, 52, int(235 * a)),
+                            outline=edge, width=4)
+        if text:
+            d.text((cx, cy), text, font=f_chip, fill=WHITE + (int(255 * a),), anchor="mm")
+
+    def observe(t):
+        """「John Diamond 博士還觀察到，不只是吃的東西」糖果 →（不放字幕）糖果縮到第一格、七個字卡一個一個出現
+        →「都會讓肌肉變強或變弱」手臂撐住↑／掉下去↓ →「他認為這反映出對免疫力有益或有害」胸腺亮起（有益）／變灰（有害）"""
+        im = bg.copy().convert("RGBA")
+        lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(lay)
+        out = 1 - ease((t - 6.35) / 0.4)                 # 字卡區收掉
+        if out > 0:
+            k = ease((t - 2.8) / 0.5)                    # 糖果移到第一格
+            cx, cy = 540 + (SLOTS[0][0] - 540) * k, 720 + (SLOTS[0][1] - 720) * k
+            if k > 0:
+                chip(d, SLOTS[0][0], SLOTS[0][1], "", k * out, muted=True)
+            sc = (1 - 0.6 * k) * pop((t - 0.2) / 0.45)
+            col = tuple(int(g + (q - g) * k) for g, q in zip(GOLD, GRAYED))
+            candy(d, cx, cy, sc, col, min(1.0, ease((t - 0.2) / 0.3)) * out)
+            for i, word in enumerate(CHIPS):
+                st = 3.1 + 0.45 * i
+                a = ease((t - st) / 0.3) * out
+                if a > 0:
+                    chip(d, SLOTS[i + 1][0], SLOTS[i + 1][1], word, a, sc=pop((t - st) / 0.35))
+        ka = ease((t - 6.7) / 0.4)
+        if ka > 0:
+            for cx, arm, col in [(280, "up", GOLD), (640, "down", GRAYED)]:
+                figure(d, cx, 440, 0.42, arm, ka)
+                if arm == "up":
+                    arrow(d, cx - 120, 600, 500, col + (int(255 * ka),))
+                else:
+                    arrow(d, cx - 120, 500, 600, col + (int(255 * ka),))
+        im.alpha_composite(lay)
+        kb = ease((t - 8.7) / 0.4)
+        if kb > 0:
+            lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            d = ImageDraw.Draw(lay)
+            for cx in (280, 640):
+                c = SIL + (int(235 * kb),)
+                d.ellipse([cx - 34, 726, cx + 34, 794], fill=c)
+                d.rounded_rectangle([cx - 14, 784, cx + 14, 812], 6, fill=c)
+                d.rounded_rectangle([cx - 96, 804, cx + 96, 1000], 56, fill=c)
+            im.alpha_composite(lay)
+            pulse = 1 + 0.1 * np.sin((t - 8.7) * 2 * np.pi / 1.4)
+            glow(im, 280, 858, 46 * pulse, GOLD, kb)
+            d = ImageDraw.Draw(im)
+            d.ellipse([280 - 19, 858 - 24, 280 + 19, 858 + 24], fill=GOLD + (int(255 * kb),))
+            d.ellipse([640 - 9, 858 - 11, 640 + 9, 858 + 11], fill=GRAYED + (int(255 * kb),))
+            d.text((280 + 128, 900), "有益", font=f_small, fill=GOLD + (int(255 * kb),), anchor="lm")
+            d.text((640 + 128, 900), "有害", font=f_small, fill=GRAYED + (int(255 * kb),), anchor="lm")   # 到 x 870，避開右側按鈕
+        return im.convert("RGB")
+
+    def question(t):
+        """結尾問句（大字，不另外放字幕）：「肌肉力量的強弱／能分辨好壞真偽嗎？」"""
+        im = bg.copy().convert("RGBA")
+        d = ImageDraw.Draw(im)
+        fo = 1 - ease((t - (QUESTION_DUR - 1.3)) / 0.3)   # 交叉淡化進片尾（1 秒）之前先收掉，大字不跟片尾 Logo 疊在一起
+        for txt, y, st, col in [("肌肉力量的強弱", 640, 0.2, WHITE), ("能分辨好壞真偽嗎？", 790, 0.7, GOLD)]:
+            a = ease((t - st) / 0.45) * fo
+            if a > 0:
+                d.text((540, y + 30 * (1 - a)), txt, font=f_q, fill=col + (int(255 * a),), anchor="mm",
+                       stroke_width=2, stroke_fill=NAVY + (int(255 * a),))
+        return im.convert("RGB")
+
+    jobs = [("deltoid.mp4", deltoid, DELTOID_DUR), ("observe.mp4", observe, OBSERVE_DUR), ("question.mp4", question, QUESTION_DUR)]
+    if args.preview:
+        for name, fn, dur in jobs:
+            for s in [float(x) for x in args.preview.split(",")]:
+                if s <= dur:
+                    fn(s).save(os.path.join(args.out, f"preview_{name[:-4]}_{s:05.2f}.png"))
+        print("預覽：", args.out)
+        return
+    for name, fn, dur in jobs:
+        write(os.path.join(args.out, name), fn, dur)
 
 
 # demo.mp4：聲音是 IMG_8497 5.10–19.58 一整段；畫面四段（素材, 入點, 長度）
