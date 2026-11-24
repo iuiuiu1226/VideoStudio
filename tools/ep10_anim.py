@@ -206,7 +206,7 @@ def main():
 # ── 第三版旁白段落的動畫（使用者 2026/11/24：旁白做成動畫比較適合，取代學員練習畫面）──
 # 同一套深藍底＋金色；圖都畫在系列標題和字幕中間（y 約 440–1030）；無聲（之後配旁白再混進來）
 SIL = (232, 234, 240)          # 人形剪影（同胸腺小卡）
-DELTOID_DUR, OBSERVE_DUR, QUESTION_DUR = 3.4, 11.8, 4.6
+DELTOID_DUR, OBSERVE_DUR, QUESTION_DUR = 3.4, 13.0, 4.3
 CHIPS = ["姿勢", "聲音", "情緒", "穿著", "燈光", "圖像", "表情"]
 SLOTS = [(320, 480), (720, 480), (320, 620), (720, 620), (320, 760), (720, 760), (320, 900), (720, 900)]
 
@@ -251,6 +251,7 @@ def v3_anims(args):
     F = L.Fonts(args.font)
     bg = background()
     f_lab, f_chip, f_small, f_q = F(70, 900), F(60, 800), F(50, 800), F(82, 900)
+    f_head, f_act, f_imm, f_eng = F(54, 800), F(58, 900), F(50, 800), F(72, 900)
     from life03_anim import pop
 
     def deltoid(t):
@@ -298,52 +299,70 @@ def v3_anims(args):
         if text:
             d.text((cx, cy), text, font=f_chip, fill=WHITE + (int(255 * a),), anchor="mm")
 
-    def observe(t):
-        """「John Diamond 博士還觀察到，不只是吃的東西」糖果 →（不放字幕）糖果縮到第一格、七個字卡一個一個出現
-        →「都會讓肌肉變強或變弱」手臂撐住↑／掉下去↓ →「他認為這反映出對免疫力有益或有害」胸腺亮起（有益）／變灰（有害）"""
-        im = bg.copy().convert("RGBA")
+    CARD_T = 5.2      # 對照圖的長度（整張出現後停約 2 秒）；後面糖果、字卡往後移這麼多
+
+    def compare(t):
+        """對照圖（使用者 2026/11/24：要很明確分別撐住＝免疫力提升＝正能量、掉下去＝免疫力下降＝負能量）
+        上方小標「在 BK 測試裡」；左欄金色：手臂撐住 → ↑免疫力提升 → 正能量；右欄灰色：手臂掉下去 → ↓免疫力下降 → 負能量
+        這幾秒不放字幕（字都在圖上）"""
         lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(lay)
-        out = 1 - ease((t - 6.35) / 0.4)                 # 字卡區收掉
-        if out > 0:
-            k = ease((t - 2.8) / 0.5)                    # 糖果移到第一格
-            cx, cy = 540 + (SLOTS[0][0] - 540) * k, 720 + (SLOTS[0][1] - 720) * k
-            if k > 0:
-                chip(d, SLOTS[0][0], SLOTS[0][1], "", k * out, muted=True)
-            sc = (1 - 0.6 * k) * pop((t - 0.2) / 0.45)
-            col = tuple(int(g + (q - g) * k) for g, q in zip(GOLD, GRAYED))
-            candy(d, cx, cy, sc, col, min(1.0, ease((t - 0.2) / 0.3)) * out)
-            for i, word in enumerate(CHIPS):
-                st = 3.1 + 0.45 * i
-                a = ease((t - st) / 0.3) * out
-                if a > 0:
-                    chip(d, SLOTS[i + 1][0], SLOTS[i + 1][1], word, a, sc=pop((t - st) / 0.35))
-        ka = ease((t - 6.7) / 0.4)
-        if ka > 0:
-            for cx, arm, col in [(280, "up", GOLD), (640, "down", GRAYED)]:
-                figure(d, cx, 440, 0.42, arm, ka)
-                if arm == "up":
-                    arrow(d, cx - 120, 600, 500, col + (int(255 * ka),))
-                else:
-                    arrow(d, cx - 120, 500, 600, col + (int(255 * ka),))
+        fo = 1 - ease((t - (CARD_T - 0.35)) / 0.35)      # 換到下一個畫面前收掉
+        ah = ease((t - 0.1) / 0.35) * fo
+        if ah > 0:
+            d.text((540, 482), "在 BK 測試裡", font=f_head, fill=GOLD + (int(255 * ah),), anchor="mm")
+        for k, (cx, arm, col, t0, act, imm, up, eng) in enumerate([
+                (300, "up", GOLD, 0.3, "手臂撐住", "免疫力提升", True, "正能量"),
+                (720, "down", GRAYED, 1.6, "手臂掉下去", "免疫力下降", False, "負能量")]):
+            ab = ease((t - t0) / 0.3) * fo
+            if ab <= 0:
+                continue
+            d.rounded_rectangle([cx - 185, 540, cx + 185, 1240], 34, fill=(24, 30, 44, int(225 * ab)),
+                                outline=col + (int(255 * ab),), width=5)
+            a1 = ease((t - t0 - 0.15) / 0.3) * fo
+            if a1 > 0:
+                figure(d, cx + 10, 585, 0.42, arm, a1)
+            a2 = ease((t - t0 - 0.4) / 0.3) * fo
+            if a2 > 0:
+                d.text((cx, 880), act, font=f_act, fill=WHITE + (int(255 * a2),), anchor="mm")
+            a3 = ease((t - t0 - 0.7) / 0.3) * fo
+            if a3 > 0:
+                c3 = col + (int(255 * a3),)
+                x0 = cx - 150
+                arrow(d, x0, 1000 if up else 950, 950 if up else 1000, c3, w=9)
+                d.text((x0 + 34, 975), imm, font=f_imm, fill=c3, anchor="lm")
+            a4 = ease((t - t0 - 1.0) / 0.3) * fo
+            if a4 > 0:
+                sc = pop((t - t0 - 1.0) / 0.35)
+                pw, ph = 250 * sc, 110 * sc
+                fill = col if up else (70, 74, 86)
+                d.rounded_rectangle([cx - pw / 2, 1120 - ph / 2, cx + pw / 2, 1120 + ph / 2], 55 * sc, fill=fill + (int(255 * a4),))
+                d.text((cx, 1120), eng, font=f_eng, fill=(NAVY if up else WHITE) + (int(255 * a4),), anchor="mm")
+        return lay
+
+    def observe(t):
+        """對照圖（0–5.2 秒）→「John Diamond 博士還觀察到，不只是吃的東西」糖果 →（不放字幕）糖果縮到第一格、
+        七個字卡一個一個出現 →「都會讓肌肉變強或變弱」字卡留著"""
+        im = bg.copy().convert("RGBA")
+        if t < CARD_T:
+            im.alpha_composite(compare(t))
+            return im.convert("RGB")
+        t = t - CARD_T
+        lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(lay)
+        k = ease((t - 2.8) / 0.5)                        # 糖果移到第一格
+        cx, cy = 540 + (SLOTS[0][0] - 540) * k, 720 + (SLOTS[0][1] - 720) * k
+        if k > 0:
+            chip(d, SLOTS[0][0], SLOTS[0][1], "", k, muted=True)
+        sc = (1 - 0.6 * k) * pop((t - 0.15) / 0.45)
+        col = tuple(int(g + (q - g) * k) for g, q in zip(GOLD, GRAYED))
+        candy(d, cx, cy, sc, col, min(1.0, ease((t - 0.15) / 0.3)))
+        for i, word in enumerate(CHIPS):
+            st = 3.1 + 0.36 * i
+            a = ease((t - st) / 0.3)
+            if a > 0:
+                chip(d, SLOTS[i + 1][0], SLOTS[i + 1][1], word, a, sc=pop((t - st) / 0.35))
         im.alpha_composite(lay)
-        kb = ease((t - 8.7) / 0.4)
-        if kb > 0:
-            lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-            d = ImageDraw.Draw(lay)
-            for cx in (280, 640):
-                c = SIL + (int(235 * kb),)
-                d.ellipse([cx - 34, 726, cx + 34, 794], fill=c)
-                d.rounded_rectangle([cx - 14, 784, cx + 14, 812], 6, fill=c)
-                d.rounded_rectangle([cx - 96, 804, cx + 96, 1000], 56, fill=c)
-            im.alpha_composite(lay)
-            pulse = 1 + 0.1 * np.sin((t - 8.7) * 2 * np.pi / 1.4)
-            glow(im, 280, 858, 46 * pulse, GOLD, kb)
-            d = ImageDraw.Draw(im)
-            d.ellipse([280 - 19, 858 - 24, 280 + 19, 858 + 24], fill=GOLD + (int(255 * kb),))
-            d.ellipse([640 - 9, 858 - 11, 640 + 9, 858 + 11], fill=GRAYED + (int(255 * kb),))
-            d.text((280 + 128, 900), "有益", font=f_small, fill=GOLD + (int(255 * kb),), anchor="lm")
-            d.text((640 + 128, 900), "有害", font=f_small, fill=GRAYED + (int(255 * kb),), anchor="lm")   # 到 x 870，避開右側按鈕
         return im.convert("RGB")
 
     def question(t):
