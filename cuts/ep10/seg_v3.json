@@ -74,7 +74,7 @@
     },
     {
       "id": "#V3 書封",
-      "src": "work/ep10_anim/book_v3.mp4",
+      "src": "work/ep10_anim/book.mp4",
       "in": 0.0,
       "out": 3.93,
       "subs": [
@@ -85,16 +85,11 @@
         ],
         [
           2.8,
-          4.05,
+          4.2,
           "就是叫 BK"
-        ],
-        [
-          4.15,
-          5.95,
-          "這本書後來改了書名"
         ]
       ],
-      "pad": 2.3,
+      "pad": 0.6,
       "room": "room_IMG_8498.wav",
       "xfade": 0.3
     },
@@ -146,23 +141,8 @@
           "最早就是研究吃糖"
         ]
       ],
-      "pad": 0.55,
+      "pad": 0.3,
       "room": "room_IMG_8496.wav"
-    },
-    {
-      "id": "#A1 三角肌",
-      "src": "work/ep10_anim/deltoid.mp4",
-      "in": 0.0,
-      "out": 3.4,
-      "subs": [
-        [
-          0.2,
-          3.05,
-          "測試時看的是\\N手臂和肩膀之間的三角肌"
-        ]
-      ],
-      "auto_gain": false,
-      "xfade": 0.3
     },
     {
       "id": "#D1 兩種反應",
@@ -203,8 +183,7 @@
       ],
       "pad": 0.3,
       "room": "room_IMG_8497.wav",
-      "overlay": "work/ep10_anim/thymus_a.mov",
-      "xfade": 0.3
+      "overlay": "work/ep10_anim/thymus_a.mov"
     },
     {
       "id": "#D3a 萎縮",
@@ -300,7 +279,7 @@
       "id": "#A3 問句",
       "src": "work/ep10_anim/question.mp4",
       "in": 0.0,
-      "out": 4.3,
+      "out": 5.6,
       "subs": [],
       "auto_gain": false,
       "xfade": 0.3

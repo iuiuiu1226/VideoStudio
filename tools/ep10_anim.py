@@ -206,13 +206,14 @@ def main():
 # ── 第三版旁白段落的動畫（使用者 2026/11/24：旁白做成動畫比較適合，取代學員練習畫面）──
 # 同一套深藍底＋金色；圖都畫在系列標題和字幕中間（y 約 440–1030）；無聲（之後配旁白再混進來）
 SIL = (232, 234, 240)          # 人形剪影（同胸腺小卡）
-DELTOID_DUR, OBSERVE_DUR, QUESTION_DUR = 3.4, 13.0, 4.3
+DELTOID_DUR, OBSERVE_DUR, QUESTION_DUR = 3.4, 13.0, 5.6
 CHIPS = ["姿勢", "聲音", "情緒", "穿著", "燈光", "圖像", "表情"]
 SLOTS = [(320, 480), (720, 480), (320, 620), (720, 620), (320, 760), (720, 760), (320, 900), (720, 900)]
 
 
-def figure(d, cx, top, s, arm="up", a=1.0):
-    """正面人形：頭、身體、左手下垂、右手（畫面右邊）平舉（up）或往下掉（down）；回傳 (肩膀, 手) 的位置"""
+def figure(d, cx, top, s, arm="up", a=1.0, other_arm=True, arm_len=1.0):
+    """正面人形：頭、身體、畫面左邊的手下垂、畫面右邊的手平舉（up）或往下掉（down）；回傳 (肩膀, 手) 的位置
+    other_arm=False 不畫下垂的那隻手（只留表示撐住／掉下去的手）；arm_len 是那隻手的長度比例"""
     import math
     c = SIL + (int(235 * a),)
     hr = 58 * s
@@ -221,10 +222,11 @@ def figure(d, cx, top, s, arm="up", a=1.0):
     d.rounded_rectangle([cx - 22 * s, hy + hr - 10 * s, cx + 22 * s, hy + hr + 40 * s], 8 * s, fill=c)
     t0 = hy + hr + 30 * s
     d.rounded_rectangle([cx - 110 * s, t0, cx + 110 * s, t0 + 380 * s], 70 * s, fill=c)
-    d.rounded_rectangle([cx - 160 * s, t0 + 20 * s, cx - 108 * s, t0 + 330 * s], 26 * s, fill=c)
+    if other_arm:
+        d.rounded_rectangle([cx - 160 * s, t0 + 20 * s, cx - 108 * s, t0 + 330 * s], 26 * s, fill=c)
     sh = (cx + 104 * s, t0 + 48 * s)
     d.ellipse([sh[0] - 36 * s, sh[1] - 36 * s, sh[0] + 36 * s, sh[1] + 36 * s], fill=c)
-    ln = 300 * s
+    ln = 300 * s * arm_len
     ang = 0 if arm == "up" else math.radians(58)
     hand = (sh[0] + ln * math.cos(ang), sh[1] + ln * math.sin(ang))
     d.line([sh, hand], fill=c, width=int(58 * s))
@@ -252,6 +254,7 @@ def v3_anims(args):
     bg = background()
     f_lab, f_chip, f_small, f_q = F(70, 900), F(60, 800), F(50, 800), F(82, 900)
     f_head, f_act, f_imm, f_eng = F(54, 800), F(58, 900), F(50, 800), F(72, 900)
+    f_cta = F(54, 900)
     from life03_anim import pop
 
     def deltoid(t):
@@ -321,7 +324,7 @@ def v3_anims(args):
                                 outline=col + (int(255 * ab),), width=5)
             a1 = ease((t - t0 - 0.15) / 0.3) * fo
             if a1 > 0:
-                figure(d, cx + 10, 585, 0.42, arm, a1)
+                figure(d, cx - 45, 585, 0.42, arm, a1, other_arm=False, arm_len=0.75)
             a2 = ease((t - t0 - 0.4) / 0.3) * fo
             if a2 > 0:
                 d.text((cx, 880), act, font=f_act, fill=WHITE + (int(255 * a2),), anchor="mm")
@@ -366,7 +369,8 @@ def v3_anims(args):
         return im.convert("RGB")
 
     def question(t):
-        """結尾問句（大字，不另外放字幕）：「肌肉力量的強弱／能分辨好壞真偽嗎？」"""
+        """結尾問句（大字，不另外放字幕）：「肌肉力量的強弱／能分辨好壞真偽嗎？」
+        → 金色按鈕「歡迎來報名課程，實際體驗」（使用者 2026/11/25 要加）"""
         im = bg.copy().convert("RGBA")
         d = ImageDraw.Draw(im)
         fo = 1 - ease((t - (QUESTION_DUR - 1.3)) / 0.3)   # 交叉淡化進片尾（1 秒）之前先收掉，大字不跟片尾 Logo 疊在一起
@@ -375,9 +379,16 @@ def v3_anims(args):
             if a > 0:
                 d.text((540, y + 30 * (1 - a)), txt, font=f_q, fill=col + (int(255 * a),), anchor="mm",
                        stroke_width=2, stroke_fill=NAVY + (int(255 * a),))
+        a = ease((t - 1.6) / 0.4) * fo
+        if a > 0:
+            sc = pop((t - 1.6) / 0.45)
+            bw, bh = 720 * sc, 116 * sc                   # x 約 180–900，避開右側按鈕
+            d.rounded_rectangle([540 - bw / 2, 975 - bh / 2, 540 + bw / 2, 975 + bh / 2], 58 * sc, fill=GOLD + (int(255 * a),))
+            d.text((540, 975), "歡迎來報名課程，實際體驗", font=f_cta, fill=NAVY + (int(255 * a),), anchor="mm")
         return im.convert("RGB")
 
-    jobs = [("deltoid.mp4", deltoid, DELTOID_DUR), ("observe.mp4", observe, OBSERVE_DUR), ("question.mp4", question, QUESTION_DUR)]
+    # deltoid（三角肌）使用者 2026/11/25 說刪掉，不再輸出（程式留著）
+    jobs = [("observe.mp4", observe, OBSERVE_DUR), ("question.mp4", question, QUESTION_DUR)]
     if args.preview:
         for name, fn, dur in jobs:
             for s in [float(x) for x in args.preview.split(",")]:
