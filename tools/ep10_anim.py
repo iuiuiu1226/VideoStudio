@@ -234,6 +234,39 @@ def figure(d, cx, top, s, arm="up", a=1.0, other_arm=True, arm_len=1.0):
     return sh, hand
 
 
+def smooth_figure(im, cx, top, s, arm="up", a=1.0, arm_len=0.75, ss=3):
+    """對照圖用的人形（使用者 2026/11/25：手臂不要凸凸的）：頭、身體、一隻手（平舉 up／往下掉 down）
+    手臂粗細一致、從身體裡面長出來（肩膀跟身體連在一起，不另外畫一顆圓）、末端用同樣粗細的圓頭收尾；
+    放大 ss 倍畫再縮小，邊緣平滑"""
+    import math
+    hr = 58 * s
+    t0 = top + 2 * hr + 30 * s
+    L = 300 * s * arm_len                       # 手臂露出身體的長度
+    x0, y0 = cx - 120 * s, top - 4               # 畫布範圍（夠放平舉的手）
+    x1, y1 = cx + 120 * s + L + 40 * s, t0 + 390 * s
+    Wc, Hc = int((x1 - x0) * ss), int((y1 - y0) * ss)
+    cv = Image.new("RGBA", (Wc, Hc), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cv)
+    c = SIL + (int(235 * a),)
+    X = lambda x: (x - x0) * ss
+    Y = lambda y: (y - y0) * ss
+    hy = top + hr
+    d.ellipse([X(cx - hr), Y(hy - hr), X(cx + hr), Y(hy + hr)], fill=c)
+    d.rounded_rectangle([X(cx - 22 * s), Y(hy + hr - 10 * s), X(cx + 22 * s), Y(t0 + 20 * s)], 8 * s * ss, fill=c)
+    d.rounded_rectangle([X(cx - 110 * s), Y(t0), X(cx + 110 * s), Y(t0 + 380 * s)], 70 * s * ss, fill=c)
+    w = 54 * s                                   # 手臂粗細
+    p0 = (cx + 56 * s, t0 + 52 * s)              # 從身體裡面開始
+    ang = 0 if arm == "up" else math.radians(60)
+    inside = (110 * s - 56 * s) / max(math.cos(ang), 0.3)
+    p1 = (p0[0] + (inside + L) * math.cos(ang), p0[1] + (inside + L) * math.sin(ang))
+    d.line([(X(p0[0]), Y(p0[1])), (X(p1[0]), Y(p1[1]))], fill=c, width=int(w * ss))
+    r = w / 2
+    for px, py in (p0, p1):
+        d.ellipse([X(px - r), Y(py - r), X(px + r), Y(py + r)], fill=c)
+    cv = cv.resize((max(1, Wc // ss), max(1, Hc // ss)), Image.LANCZOS)
+    im.alpha_composite(cv, (int(x0), int(y0)))
+
+
 def arrow(d, x, y0, y1, col, w=10):
     """直的箭頭，從 y0 指向 y1"""
     d.line([(x, y0), (x, y1 - (12 if y1 > y0 else -12))], fill=col, width=w)
@@ -324,7 +357,8 @@ def v3_anims(args):
                                 outline=col + (int(255 * ab),), width=5)
             a1 = ease((t - t0 - 0.15) / 0.3) * fo
             if a1 > 0:
-                figure(d, cx - 45, 585, 0.42, arm, a1, other_arm=False, arm_len=0.75)
+                smooth_figure(lay, cx - 50, 585, 0.42, arm, a1, arm_len=0.72)   # 手尖約到 cx+85，框右緣 cx+185
+                d = ImageDraw.Draw(lay)
             a2 = ease((t - t0 - 0.4) / 0.3) * fo
             if a2 > 0:
                 d.text((cx, 880), act, font=f_act, fill=WHITE + (int(255 * a2),), anchor="mm")
