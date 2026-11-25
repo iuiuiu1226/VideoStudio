@@ -829,3 +829,14 @@ id `1qbEVfFiV1rZtoYsRu4bwbXyBLR-z5-Nm`，5 分 38 秒、2160x3840 HDR 30 格，�
   `output/cover_options/10_封面候選_{A,B,C,D}.jpg`、總表 `10_封面候選_ABCD.jpg`，等使用者選
   → 使用者選 B（IMG_8502 1.6，`cuts/cover_ep10.json` frame x 211, y 301, w 706, h 1255；封面 `--src` 要放 IMG_8502 的資料夾）；
   封面圖、影片開頭 0.1 秒、嵌入封面都換成這張（下載頁 19.3 MB）
+- 旁白配音（2026/11/25）：使用者在 AI Studio 儲值 NT$150。這個雲端環境的網路密鑰主機名稱打錯（`generativelanguage.googleeapis.com`，
+  多一個 e），代理沒有帶到金鑰；安全輸入框在使用者的 App 跳不出來，使用者選擇直接給金鑰 → 存在專案根目錄 `.env`（不進版控），
+  `tools/gemini_api.py` 會讀。之後要改回網路密鑰：環境設定的網路密鑰把主機改成 `generativelanguage.googleapis.com`。
+  - 稿子 `scripts/narration/ep10_v3.txt`（兩句各一口氣唸完）→ `voice_gemini.py --voice Sulafat` → `work/ep10_vo`，`check_voice.py` 兩句都 100% 相符
+  - `ep10_anim.py --v3anim` 讀 `work/ep10_vo`：加快 1.12 倍，觀察那段放在 5.3 秒（對照圖之後），七個字卡照唸到的時間出現
+    （聲音能量找開口：姿勢 4.02、聲音 4.87、情緒 5.70、穿著 6.73、燈光 7.69、圖像 8.40、表情 9.15 秒 ÷ 1.12），
+    observe.mp4 13.0→16.8 秒；結尾問句 0.3 秒開始唸，「能分辨」「歡迎來報名」出現時間對準，question.mp4 5.6→7.5 秒
+  - 剪輯清單 A2、A3 改成自動對齊音量（旁白比老師大 1 dB，再 `gain_db -1`：老師 -16.0、旁白 -16.3 LUFS）；
+    字幕只放「John Diamond 博士還觀察到，不只是吃的東西」「都會讓肌肉變強或變弱」（字卡、大字唸的地方不放）
+  - 配樂抖音節拍 `--curve "79.6:0,82.6:-10"`，其他同上；逐字稿相同平均 98%（旁白兩段 100%）；1 分 32 秒；
+    下載頁 1550k（19.4 MB，`output/dl/10_BK課堂精華_VOL04_第三版_配音.mp4`），原檔 `output/10_BK課堂精華_VOL04_第三版_原檔_配音.mp4`

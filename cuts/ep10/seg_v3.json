@@ -224,21 +224,21 @@
       "id": "#A2 觀察",
       "src": "work/ep10_anim/observe.mp4",
       "in": 0.0,
-      "out": 13.0,
+      "out": 16.8,
       "subs": [
         [
-          5.4,
-          8.0,
+          5.3,
+          8.6,
           "John Diamond 博士\\N還觀察到，不只是吃的東西"
         ],
         [
-          10.8,
-          12.75,
+          14.31,
+          16.45,
           "都會讓肌肉變強或變弱"
         ]
       ],
-      "auto_gain": false,
-      "xfade": 0.3
+      "xfade": 0.3,
+      "gain_db": -1.0
     },
     {
       "id": "#T6 日光燈",
@@ -279,10 +279,10 @@
       "id": "#A3 問句",
       "src": "work/ep10_anim/question.mp4",
       "in": 0.0,
-      "out": 5.6,
+      "out": 7.5,
       "subs": [],
-      "auto_gain": false,
-      "xfade": 0.3
+      "xfade": 0.3,
+      "gain_db": -1.0
     }
   ]
 }

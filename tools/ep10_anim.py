@@ -63,6 +63,7 @@ def main():
     ap.add_argument("--px", default="", help="--v2 用：工作檔資料夾（IMG_8497.MOV、IMG_8496.MOV）")
     ap.add_argument("--v3", action="store_true", help="第三版的 book_v3（《BK》→ 後來改名《Your Body Doesn't Lie》），要加 --book-src")
     ap.add_argument("--v3anim", action="store_true", help="第三版旁白段落的動畫：deltoid.mp4、observe.mp4、question.mp4")
+    ap.add_argument("--vo", default=os.path.join(ROOT, "work", "ep10_vo"), help="--v3anim 用：旁白配音資料夾（voice_gemini.py 的輸出）")
     args = ap.parse_args()
     if args.v3anim:
         v3_anims(args)
@@ -206,7 +207,16 @@ def main():
 # ── 第三版旁白段落的動畫（使用者 2026/11/24：旁白做成動畫比較適合，取代學員練習畫面）──
 # 同一套深藍底＋金色；圖都畫在系列標題和字幕中間（y 約 440–1030）；無聲（之後配旁白再混進來）
 SIL = (232, 234, 240)          # 人形剪影（同胸腺小卡）
-DELTOID_DUR, OBSERVE_DUR, QUESTION_DUR = 3.4, 13.0, 5.6
+DELTOID_DUR, OBSERVE_DUR, QUESTION_DUR = 3.4, 16.8, 7.5
+# 旁白配音（使用者 2026/11/25 儲值後要配；scripts/narration/ep10_v3.txt → work/ep10_vo，Sulafat，加快 1.12 倍）
+# 時間＝配音原檔的秒數（聲音能量找到的開口時間）÷ 1.12
+VO_TEMPO = 1.12
+OBS_NS = 5.3                                   # 對照圖（0–5.2 秒）之後旁白開始
+OBS_CANDY_END = 3.11                           # 「不只是吃的東西」講完（旁白秒數）
+OBS_CHIPS = [3.59, 4.35, 5.09, 6.01, 6.87, 7.50, 8.17]   # 姿勢、聲音、情緒、穿著、燈光、圖像、表情 唸到的時間
+OBS_VO_END = 10.92
+Q_NS = 0.3                                     # 問句旁白開始
+Q_L2, Q_CTA, Q_VO_END = 1.45, 3.64, 5.49        # 「能分辨…」「歡迎來報名…」開口、唸完（旁白秒數）
 CHIPS = ["姿勢", "聲音", "情緒", "穿著", "燈光", "圖像", "表情"]
 SLOTS = [(320, 480), (720, 480), (320, 620), (720, 620), (320, 760), (720, 760), (320, 900), (720, 900)]
 
@@ -387,7 +397,7 @@ def v3_anims(args):
         t = t - CARD_T
         lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(lay)
-        k = ease((t - 2.8) / 0.5)                        # 糖果移到第一格
+        k = ease((t - (OBS_NS - CARD_T + OBS_CANDY_END - 0.1)) / 0.5)   # 「吃的東西」講完，糖果移到第一格
         cx, cy = 540 + (SLOTS[0][0] - 540) * k, 720 + (SLOTS[0][1] - 720) * k
         if k > 0:
             chip(d, SLOTS[0][0], SLOTS[0][1], "", k, muted=True)
@@ -395,7 +405,7 @@ def v3_anims(args):
         col = tuple(int(g + (q - g) * k) for g, q in zip(GOLD, GRAYED))
         candy(d, cx, cy, sc, col, min(1.0, ease((t - 0.15) / 0.3)))
         for i, word in enumerate(CHIPS):
-            st = 3.1 + 0.36 * i
+            st = OBS_NS - CARD_T + OBS_CHIPS[i] - 0.12     # 唸到那個詞就出現
             a = ease((t - st) / 0.3)
             if a > 0:
                 chip(d, SLOTS[i + 1][0], SLOTS[i + 1][1], word, a, sc=pop((t - st) / 0.35))
@@ -408,14 +418,14 @@ def v3_anims(args):
         im = bg.copy().convert("RGBA")
         d = ImageDraw.Draw(im)
         fo = 1 - ease((t - (QUESTION_DUR - 1.3)) / 0.3)   # 交叉淡化進片尾（1 秒）之前先收掉，大字不跟片尾 Logo 疊在一起
-        for txt, y, st, col in [("肌肉力量的強弱", 640, 0.2, WHITE), ("能分辨好壞真偽嗎？", 790, 0.7, GOLD)]:
+        for txt, y, st, col in [("肌肉力量的強弱", 640, Q_NS - 0.1, WHITE), ("能分辨好壞真偽嗎？", 790, Q_NS + Q_L2 - 0.1, GOLD)]:
             a = ease((t - st) / 0.45) * fo
             if a > 0:
                 d.text((540, y + 30 * (1 - a)), txt, font=f_q, fill=col + (int(255 * a),), anchor="mm",
                        stroke_width=2, stroke_fill=NAVY + (int(255 * a),))
-        a = ease((t - 1.6) / 0.4) * fo
+        a = ease((t - (Q_NS + Q_CTA - 0.1)) / 0.4) * fo
         if a > 0:
-            sc = pop((t - 1.6) / 0.45)
+            sc = pop((t - (Q_NS + Q_CTA - 0.1)) / 0.45)
             bw, bh = 720 * sc, 116 * sc                   # x 約 180–900，避開右側按鈕
             d.rounded_rectangle([540 - bw / 2, 975 - bh / 2, 540 + bw / 2, 975 + bh / 2], 58 * sc, fill=GOLD + (int(255 * a),))
             d.text((540, 975), "歡迎來報名課程，實際體驗", font=f_cta, fill=NAVY + (int(255 * a),), anchor="mm")
@@ -430,8 +440,23 @@ def v3_anims(args):
                     fn(s).save(os.path.join(args.out, f"preview_{name[:-4]}_{s:05.2f}.png"))
         print("預覽：", args.out)
         return
+    # 旁白：配音檔加快 1.12 倍、放在動畫的 OBS_NS／Q_NS 秒，前後補靜音到動畫長度
+    vo = {}
+    for name, line, start, dur in [("observe.mp4", "line01.wav", OBS_NS, OBSERVE_DUR), ("question.mp4", "line02.wav", Q_NS, QUESTION_DUR)]:
+        src = os.path.join(args.vo, line)
+        if os.path.exists(src):
+            out = os.path.join(args.out, name.replace(".mp4", "_vo.wav"))
+            raw = subprocess.run(["ffmpeg", "-v", "error", "-i", src, "-af", f"aresample=48000,atempo={VO_TEMPO}",
+                                  "-ac", "2", "-f", "f32le", "-"], capture_output=True, check=True).stdout
+            y = np.frombuffer(raw, np.float32).reshape(-1, 2)
+            track = np.zeros((int((dur + 0.2) * 48000), 2), np.float32)
+            i0 = int(start * 48000)
+            track[i0:i0 + len(y)] = y[:len(track) - i0]
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", "48000", "-ac", "2", "-i", "-", out],
+                           input=track.tobytes(), check=True)
+            vo[name] = out
     for name, fn, dur in jobs:
-        write(os.path.join(args.out, name), fn, dur)
+        write(os.path.join(args.out, name), fn, dur, audio=(vo[name], 0, dur) if name in vo else None)
 
 
 # demo.mp4：聲音是 IMG_8497 5.10–19.58 一整段；畫面四段（素材, 入點, 長度）
