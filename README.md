@@ -809,3 +809,10 @@ id `1qbEVfFiV1rZtoYsRu4bwbXyBLR-z5-Nm`，5 分 38 秒、2160x3840 HDR 30 格，�
   下載頁放在最上面，下面依序是放克銅管、科普探索
   - 使用者選定「抖音節拍」（2026/11/25）：下載頁上放克銅管、科普探索兩支拿掉，第三版只留抖音節拍；
     編號 10 定版配樂＝`tiktok_beat.mp3` `--rel -21`＋中頻讓出（成片 `output/10_BK課堂精華_BK是什麼_v3e_抖音節拍.mp4`）
+- 封面選 B（2026/11/25）：`cuts/cover_ep10.json`＝`cover_options/cover_ep10_B.json`（IMG_8498 22.45 秒，「身體不會說謊？／認識 BK 測試」，
+  副標「從鑽石博士說起」）→ `output/10_BK課堂精華_VOL04_封面.jpg`。使用者要影片檔顯示的預覽圖就是封面 B →
+  封面嵌進影片檔（MP4 的封面圖，影片內容不變）：
+  `ffmpeg -i 影片.mp4 -i 封面.jpg -map 0 -map 1 -c copy -disposition:v:1 attached_pic -movflags +faststart 輸出.mp4`
+  （下載頁版 `output/dl/10_BK課堂精華_VOL04_第三版_封面B.mp4` 19.3 MB、原檔 `output/10_BK課堂精華_VOL04_第三版_原檔_封面B.mp4`）；
+  電腦、多數播放器會顯示這張；iPhone「照片」App、雲端硬碟的縮圖是抓影片畫面（通常第一格），不讀這張；
+  IG 也不讀，發文時在「編輯封面」選「從相簿新增」封面圖
