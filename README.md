@@ -801,3 +801,5 @@ id `1qbEVfFiV1rZtoYsRu4bwbXyBLR-z5-Nm`，5 分 38 秒、2160x3840 HDR 30 格，�
   `--music-eq "equalizer=f=3500:t=q:w=1.0:g=-5,equalizer=f=2200:t=q:w=1.0:g=-9,equalizer=f=1000:t=q:w=1.0:g=-6,equalizer=f=400:t=q:w=1.0:g=-2"`
   `--no-duck --lufs -14 --fade-out 2.5 --curve "75.8:0,78.8:-10"` → 95%。`output/10_BK課堂精華_BK是什麼_v3e_放克銅管.mp4`，
   下載頁放在科普探索那版上面比較
+  - 使用者：「音樂音量小沒關係，以老師的聲音為主」→ 再小 3 dB（`--rel -23`，其他同上），逐字稿相同 95%；
+    `output/10_BK課堂精華_BK是什麼_v3e_放克銅管_小聲.mp4`，取代下載頁上 -20 那支
