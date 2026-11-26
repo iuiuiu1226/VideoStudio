@@ -207,11 +207,16 @@ def main():
 # ── 第三版旁白段落的動畫（使用者 2026/11/24：旁白做成動畫比較適合，取代學員練習畫面）──
 # 同一套深藍底＋金色；圖都畫在系列標題和字幕中間（y 約 440–1030）；無聲（之後配旁白再混進來）
 SIL = (232, 234, 240)          # 人形剪影（同胸腺小卡）
-DELTOID_DUR, OBSERVE_DUR, QUESTION_DUR = 3.4, 16.8, 7.5
+DELTOID_DUR, OBSERVE_DUR, QUESTION_DUR = 3.4, 11.72, 7.5
+# 對照圖（compare.mp4）：聲音＝cuts/ep10/seg_cmp_audio.json 用 build_segment 接好的老師原音（work/ep10_anim/cmp_audio.mp4，14.27 秒）
+# 各欄（出現, 免疫力那行, 正／負能量）＝原片秒數換算到接好的時間：「掉」40.00、「免疫力」44.32、「下降」44.96；「肩膀」50.83、「免疫力」59.02、「比較強」59.60
+COMPARE_DUR = 14.27
+CMP_R = (1.45, 3.45, 4.15)    # 右欄 掉下去
+CMP_L = (7.45, 12.50, 13.15)  # 左欄 撐住
 # 旁白配音（使用者 2026/11/25 儲值後要配；scripts/narration/ep10_v3.txt → work/ep10_vo，Sulafat，加快 1.12 倍）
 # 時間＝配音原檔的秒數（聲音能量找到的開口時間）÷ 1.12
 VO_TEMPO = 1.12
-OBS_NS = 5.3                                   # 對照圖（0–5.2 秒）之後旁白開始
+OBS_NS = 0.3                                   # 旁白開始（對照圖拆出去成 compare.mp4）
 OBS_CANDY_END = 3.11                           # 「不只是吃的東西」講完（旁白秒數）
 OBS_CHIPS = [3.59, 4.35, 5.09, 6.01, 6.87, 7.50, 8.17]   # 姿勢、聲音、情緒、穿著、燈光、圖像、表情 唸到的時間
 OBS_VO_END = 10.92
@@ -345,47 +350,48 @@ def v3_anims(args):
         if text:
             d.text((cx, cy), text, font=f_chip, fill=WHITE + (int(255 * a),), anchor="mm")
 
-    CARD_T = 5.2      # 對照圖的長度（整張出現後停約 2 秒）；後面糖果、字卡往後移這麼多
+    CARD_T = 0.0      # 對照圖 2026/11/26 改成獨立一段 compare.mp4（配老師原音），observe 直接從糖果開始
 
     def compare(t):
         """對照圖（使用者 2026/11/24：要很明確分別撐住＝免疫力提升＝正能量、掉下去＝免疫力下降＝負能量）
-        上方小標「在 BK 測試裡」；左欄金色：手臂撐住 → ↑免疫力提升 → 正能量；右欄灰色：手臂掉下去 → ↓免疫力下降 → 負能量
-        這幾秒不放字幕（字都在圖上）"""
+        2026/11/26 改成配老師原音（cmp_audio.mp4：IMG_8497「所以剛剛那個手掉下去，因為那會讓你的免疫力下降。
+        那如果那個東西會讓你肩膀肌肉撐住，表示那個時候胸腺是正常擴張的狀態，那時候你的身體的免疫力就比較強」）：
+        老師先講掉下去 → 右欄先出現；講到撐住 → 左欄出現；「免疫力下降／比較強」講到時那一行和「負能量／正能量」才出現。
+        整張圖放在 y 450–1030（下面要放老師講話的字幕）"""
         lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(lay)
-        fo = 1 - ease((t - (CARD_T - 0.35)) / 0.35)      # 換到下一個畫面前收掉
-        ah = ease((t - 0.1) / 0.35) * fo
-        if ah > 0:
-            d.text((540, 482), "在 BK 測試裡", font=f_head, fill=GOLD + (int(255 * ah),), anchor="mm")
-        for k, (cx, arm, col, t0, act, imm, up, eng) in enumerate([
-                (300, "up", GOLD, 0.3, "手臂撐住", "免疫力提升", True, "正能量"),
-                (720, "down", GRAYED, 1.6, "手臂掉下去", "免疫力下降", False, "負能量")]):
-            ab = ease((t - t0) / 0.3) * fo
+        ah = ease((t - 0.05) / 0.35)
+        d.text((540, 470), "在 BK 測試裡", font=f_head, fill=GOLD + (int(255 * ah),), anchor="mm")
+        for cx, arm, col, (t0, t_imm, t_eng), act, imm, up, eng in [
+                (300, "up", GOLD, CMP_L, "手臂撐住", "免疫力提升", True, "正能量"),
+                (720, "down", GRAYED, CMP_R, "手臂掉下去", "免疫力下降", False, "負能量")]:
+            ab = ease((t - t0) / 0.3)
             if ab <= 0:
                 continue
-            d.rounded_rectangle([cx - 185, 540, cx + 185, 1240], 34, fill=(24, 30, 44, int(225 * ab)),
+            d.rounded_rectangle([cx - 185, 505, cx + 185, 1030], 34, fill=(24, 30, 44, int(225 * ab)),
                                 outline=col + (int(255 * ab),), width=5)
-            a1 = ease((t - t0 - 0.15) / 0.3) * fo
-            if a1 > 0:
-                smooth_figure(lay, cx - 50, 585, 0.42, arm, a1, arm_len=0.72)   # 手尖約到 cx+85，框右緣 cx+185
-                d = ImageDraw.Draw(lay)
-            a2 = ease((t - t0 - 0.4) / 0.3) * fo
-            if a2 > 0:
-                d.text((cx, 880), act, font=f_act, fill=WHITE + (int(255 * a2),), anchor="mm")
-            a3 = ease((t - t0 - 0.7) / 0.3) * fo
+            smooth_figure(lay, cx - 45, 530, 0.36, arm, ab, arm_len=0.72)   # 手尖約到 cx+75，框右緣 cx+185
+            d = ImageDraw.Draw(lay)
+            d.text((cx, 765), act, font=f_act, fill=WHITE + (int(255 * ab),), anchor="mm")
+            a3 = ease((t - t_imm) / 0.3)
             if a3 > 0:
                 c3 = col + (int(255 * a3),)
                 x0 = cx - 150
-                arrow(d, x0, 1000 if up else 950, 950 if up else 1000, c3, w=9)
-                d.text((x0 + 34, 975), imm, font=f_imm, fill=c3, anchor="lm")
-            a4 = ease((t - t0 - 1.0) / 0.3) * fo
+                arrow(d, x0, 875 if up else 825, 825 if up else 875, c3, w=9)
+                d.text((x0 + 34, 850), imm, font=f_imm, fill=c3, anchor="lm")
+            a4 = ease((t - t_eng) / 0.3)
             if a4 > 0:
-                sc = pop((t - t0 - 1.0) / 0.35)
-                pw, ph = 250 * sc, 110 * sc
+                sc = pop((t - t_eng) / 0.35)
+                pw, ph = 240 * sc, 100 * sc
                 fill = col if up else (70, 74, 86)
-                d.rounded_rectangle([cx - pw / 2, 1120 - ph / 2, cx + pw / 2, 1120 + ph / 2], 55 * sc, fill=fill + (int(255 * a4),))
-                d.text((cx, 1120), eng, font=f_eng, fill=(NAVY if up else WHITE) + (int(255 * a4),), anchor="mm")
+                d.rounded_rectangle([cx - pw / 2, 955 - ph / 2, cx + pw / 2, 955 + ph / 2], 50 * sc, fill=fill + (int(255 * a4),))
+                d.text((cx, 955), eng, font=f_eng, fill=(NAVY if up else WHITE) + (int(255 * a4),), anchor="mm")
         return lay
+
+    def compare_frame(t):
+        im = bg.copy().convert("RGBA")
+        im.alpha_composite(compare(t))
+        return im.convert("RGB")
 
     def observe(t):
         """對照圖（0–5.2 秒）→「John Diamond 博士還觀察到，不只是吃的東西」糖果 →（不放字幕）糖果縮到第一格、
@@ -432,7 +438,7 @@ def v3_anims(args):
         return im.convert("RGB")
 
     # deltoid（三角肌）使用者 2026/11/25 說刪掉，不再輸出（程式留著）
-    jobs = [("observe.mp4", observe, OBSERVE_DUR), ("question.mp4", question, QUESTION_DUR)]
+    jobs = [("compare.mp4", compare_frame, COMPARE_DUR), ("observe.mp4", observe, OBSERVE_DUR), ("question.mp4", question, QUESTION_DUR)]
     if args.preview:
         for name, fn, dur in jobs:
             for s in [float(x) for x in args.preview.split(",")]:
@@ -455,6 +461,9 @@ def v3_anims(args):
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", "48000", "-ac", "2", "-i", "-", out],
                            input=track.tobytes(), check=True)
             vo[name] = out
+    cmp_audio = os.path.join(args.out, "cmp_audio.mp4")
+    if os.path.exists(cmp_audio):
+        vo["compare.mp4"] = cmp_audio
     for name, fn, dur in jobs:
         write(os.path.join(args.out, name), fn, dur, audio=(vo[name], 0, dur) if name in vo else None)
 

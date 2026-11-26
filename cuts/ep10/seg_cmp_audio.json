@@ -1,0 +1,59 @@
+{
+  "name": "編號 10 對照圖的老師原音（只取聲音）",
+  "style": {
+    "font": "Noto Sans TC",
+    "size": 78,
+    "outline": 4,
+    "shadow": 1,
+    "margin_v": 660,
+    "title": "BK 測試｜課堂精華",
+    "note": "第七感人生智慧學"
+  },
+  "clips": [
+    {
+      "id": "#c1 掉下去",
+      "src": "IMG_8497.MOV",
+      "in": 38.45,
+      "out": 40.61,
+      "subs": [],
+      "pad": 0.25,
+      "room": "room_IMG_8497.wav"
+    },
+    {
+      "id": "#c2 免疫力下降",
+      "src": "IMG_8497.MOV",
+      "in": 43.25,
+      "out": 45.75,
+      "subs": [],
+      "pad": 0.45,
+      "room": "room_IMG_8497.wav"
+    },
+    {
+      "id": "#c3 那如果",
+      "src": "IMG_8497.MOV",
+      "in": 46.4,
+      "out": 48.24,
+      "subs": [],
+      "pad": 0.12,
+      "room": "room_IMG_8497.wav"
+    },
+    {
+      "id": "#c4 撐住",
+      "src": "IMG_8497.MOV",
+      "in": 50.7,
+      "out": 54.68,
+      "subs": [],
+      "pad": 0.25,
+      "room": "room_IMG_8497.wav"
+    },
+    {
+      "id": "#c5 比較強",
+      "src": "IMG_8497.MOV",
+      "in": 58.05,
+      "out": 60.2,
+      "subs": [],
+      "pad": 0.5,
+      "room": "room_IMG_8497.wav"
+    }
+  ]
+}
