@@ -357,35 +357,37 @@ def v3_anims(args):
         2026/11/26 改成配老師原音（cmp_audio.mp4：IMG_8497「所以剛剛那個手掉下去，因為那會讓你的免疫力下降。
         那如果那個東西會讓你肩膀肌肉撐住，表示那個時候胸腺是正常擴張的狀態，那時候你的身體的免疫力就比較強」）：
         老師先講掉下去 → 右欄先出現；講到撐住 → 左欄出現；「免疫力下降／比較強」講到時那一行和「負能量／正能量」才出現。
-        整張圖放在 y 450–1030（下面要放老師講話的字幕）"""
+        版面（使用者 2026/11/26：「在 BK 測試裡」離框太近，整個重排；這段的字幕可以跟其他段不一樣）：
+        小標 y 492、框 y 615–1215（小標和框之間留約 90 px）、框內人形 645–855、文字 915、免疫力 1010、正／負能量 1120；
+        字幕移到框下面（剪輯清單裡用 \pos 把字幕底邊放在 y 1500，兩行時上緣約 1300，離框約 85 px）"""
         lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(lay)
         ah = ease((t - 0.05) / 0.35)
-        d.text((540, 470), "在 BK 測試裡", font=f_head, fill=GOLD + (int(255 * ah),), anchor="mm")
+        d.text((540, 492), "在 BK 測試裡", font=f_head, fill=GOLD + (int(255 * ah),), anchor="mm")
         for cx, arm, col, (t0, t_imm, t_eng), act, imm, up, eng in [
                 (300, "up", GOLD, CMP_L, "手臂撐住", "免疫力提升", True, "正能量"),
                 (720, "down", GRAYED, CMP_R, "手臂掉下去", "免疫力下降", False, "負能量")]:
             ab = ease((t - t0) / 0.3)
             if ab <= 0:
                 continue
-            d.rounded_rectangle([cx - 185, 505, cx + 185, 1030], 34, fill=(24, 30, 44, int(225 * ab)),
+            d.rounded_rectangle([cx - 185, 615, cx + 185, 1215], 34, fill=(24, 30, 44, int(225 * ab)),
                                 outline=col + (int(255 * ab),), width=5)
-            smooth_figure(lay, cx - 45, 530, 0.36, arm, ab, arm_len=0.72)   # 手尖約到 cx+75，框右緣 cx+185
+            smooth_figure(lay, cx - 48, 645, 0.40, arm, ab, arm_len=0.72)   # 手尖約到 cx+85，框右緣 cx+185
             d = ImageDraw.Draw(lay)
-            d.text((cx, 765), act, font=f_act, fill=WHITE + (int(255 * ab),), anchor="mm")
+            d.text((cx, 915), act, font=f_act, fill=WHITE + (int(255 * ab),), anchor="mm")
             a3 = ease((t - t_imm) / 0.3)
             if a3 > 0:
                 c3 = col + (int(255 * a3),)
                 x0 = cx - 150
-                arrow(d, x0, 875 if up else 825, 825 if up else 875, c3, w=9)
-                d.text((x0 + 34, 850), imm, font=f_imm, fill=c3, anchor="lm")
+                arrow(d, x0, 1035 if up else 985, 985 if up else 1035, c3, w=9)
+                d.text((x0 + 34, 1010), imm, font=f_imm, fill=c3, anchor="lm")
             a4 = ease((t - t_eng) / 0.3)
             if a4 > 0:
                 sc = pop((t - t_eng) / 0.35)
-                pw, ph = 240 * sc, 100 * sc
+                pw, ph = 250 * sc, 106 * sc
                 fill = col if up else (70, 74, 86)
-                d.rounded_rectangle([cx - pw / 2, 955 - ph / 2, cx + pw / 2, 955 + ph / 2], 50 * sc, fill=fill + (int(255 * a4),))
-                d.text((cx, 955), eng, font=f_eng, fill=(NAVY if up else WHITE) + (int(255 * a4),), anchor="mm")
+                d.rounded_rectangle([cx - pw / 2, 1120 - ph / 2, cx + pw / 2, 1120 + ph / 2], 53 * sc, fill=fill + (int(255 * a4),))
+                d.text((cx, 1120), eng, font=f_eng, fill=(NAVY if up else WHITE) + (int(255 * a4),), anchor="mm")
         return lay
 
     def compare_frame(t):
