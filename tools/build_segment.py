@@ -31,6 +31,7 @@
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -93,6 +94,29 @@ def lerp_expr(keys, k, var="it"):
 def ass_time(t):
     cs = int(round(t * 100))
     return f"{cs // 360000}:{cs // 6000 % 60:02d}:{cs // 100 % 60:02d}.{cs % 100:02d}"
+
+
+FAD = re.compile(r"\\fad\((\d+),(\d+)\)")
+
+
+def merge_events(events, gap=0.1):
+    """同一則字（字幕、段落標籤、旁邊的備注）被剪成好幾段時，每段各寫一則，前後之間常有 1–2 百分之一秒的空隙
+    （每段長度對齊到格數，字的結束時間沒有），播放時那一格字會消失、看起來閃一下。
+    相同樣式、相同文字（不看淡入淡出）而且前後相接（空隙 gap 秒內）的合成一則：淡入用第一則的、淡出用最後一則的。"""
+    out = []
+    for s, e, text, st in sorted(events, key=lambda x: x[0]):
+        key = (st, FAD.sub("", text))
+        for k in range(len(out) - 1, -1, -1):
+            ps, pe, ptext, pst = out[k]
+            if (pst, FAD.sub("", ptext)) == key and s - gap <= pe <= s + 0.05:
+                m0, m1 = FAD.search(ptext), FAD.search(text)
+                if m0 and m1:
+                    ptext = FAD.sub(lambda _: f"\\fad({m0.group(1)},{m1.group(2)})", ptext, count=1)
+                out[k] = (ps, max(pe, e), ptext, pst)
+                break
+        else:
+            out.append((s, e, text, st))
+    return out
 
 
 def build_ass(events, path, style):
@@ -371,7 +395,7 @@ def main():
             events.append((a, b, fad + style["note"], "Note"))
 
     ass = os.path.join(tmp, "subs.ass")
-    build_ass(events, ass, style)
+    build_ass(merge_events(events), ass, style)
     if args.ass_only:
         shutil.copy(ass, args.ass_only)
         print(f"{args.ass_only}  {t0:.2f}s")
