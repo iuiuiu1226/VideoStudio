@@ -390,11 +390,27 @@ const Case: React.FC<{f: number; vis: Vis}> = ({f, vis}) => {
   const at = vis.at ?? [0, 0, 0, 0];
   const chips = vis.chips ?? [];
   const head = interpolate(f, [0, 12], [0, 1], clamp);
+  const settle = interpolate(f, [22, 44], [0, 1], clamp);
   const reveal = (i: number) => interpolate(f, [at[i] * FPS, at[i] * FPS + 10], [0, 1], clamp);
   const tagIn = reveal(3);
   return (
     <>
-      <div style={{...label(70, GOLD), left: 60, top: 22, opacity: head, padding: '4px 34px', border: `4px solid ${GOLD}`, borderRadius: 16, boxShadow: '0 0 24px rgba(242,195,91,0.4)'}}>{vis.title}</div>
+      <div
+        style={{
+          ...label(70, GOLD),
+          left: 60,
+          top: 22 + (1 - settle) * 170,
+          opacity: head,
+          padding: '4px 34px',
+          border: `4px solid ${GOLD}`,
+          borderRadius: 16,
+          boxShadow: '0 0 24px rgba(242,195,91,0.4)',
+          transform: `scale(${1 + 0.9 * (1 - settle)})`,
+          transformOrigin: 'left top',
+        }}
+      >
+        {vis.title}
+      </div>
       {chips.map((c, i) => {
         const r = reveal(i);
         const last = i === chips.length - 1;
