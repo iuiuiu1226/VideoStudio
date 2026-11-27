@@ -518,7 +518,7 @@ export const Clip1: React.FC = () => {
           background: 'rgba(20,24,50,0.6)',
         }}
       >
-        拉低能量的五種行為・直播精華
+        拉低能量的五種行為・第 1 種
       </div>
 
       <div
@@ -574,16 +574,13 @@ export const Clip1: React.FC = () => {
           <div style={{position: 'absolute', left: 0, width: 1080, top: 1190, display: 'flex', justifyContent: 'center', opacity: subOp}}>
             <div
               style={{
-                padding: '26px 40px',
-                borderRadius: 30,
-                background: 'rgba(8,12,34,0.62)',
-                border: '1.5px solid rgba(242,195,91,0.35)',
                 textAlign: 'center',
-                fontSize: 58,
-                fontWeight: 700,
-                lineHeight: 1.45,
+                fontSize: 44,
+                fontWeight: 600,
+                lineHeight: 1.5,
+                letterSpacing: 1,
                 whiteSpace: 'pre-line',
-                textShadow: '0 3px 12px rgba(0,0,0,0.8)',
+                textShadow: '0 2px 10px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.9)',
               }}
             >
               {sub.text}
@@ -594,19 +591,26 @@ export const Clip1: React.FC = () => {
 
       {endLocal >= 0 ? (
         <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
-          <div
-            style={{
-              opacity: interpolate(endLocal, [0, 14], [0, 1], clamp),
-              textAlign: 'center',
-              fontSize: 104,
-              fontWeight: 900,
-              lineHeight: 1.35,
-              textShadow: '0 6px 24px rgba(0,0,0,0.6)',
-            }}
-          >
-            說謊的背後，
-            <br />
-            是<span style={{color: GOLD, textShadow: '0 0 30px rgba(242,195,91,0.7)'}}>恐懼</span>
+          <div style={{opacity: interpolate(endLocal, [0, 14], [0, 1], clamp), textAlign: 'center', textShadow: '0 6px 24px rgba(0,0,0,0.6)'}}>
+            <div style={{fontSize: 92, fontWeight: 900, lineHeight: 1.35}}>說謊，只是第 1 種</div>
+            <div style={{fontSize: 108, fontWeight: 900, lineHeight: 1.35, marginTop: 10}}>
+              還有 <span style={{color: GOLD, textShadow: '0 0 30px rgba(242,195,91,0.7)'}}>4</span> 種行為
+            </div>
+            <div
+              style={{
+                display: 'inline-block',
+                marginTop: 70,
+                padding: '16px 40px',
+                border: `3px solid ${GOLD}`,
+                borderRadius: 999,
+                fontSize: 42,
+                fontWeight: 700,
+                color: GOLD,
+                background: 'rgba(20,24,50,0.6)',
+              }}
+            >
+              完整直播｜YouTube 第七感宇宙能量學
+            </div>
           </div>
         </AbsoluteFill>
       ) : null}
@@ -617,6 +621,7 @@ export const Clip1: React.FC = () => {
           left: 0,
           width: 1080,
           top: 1560,
+          opacity: endLocal >= 0 ? 0 : 1,
           textAlign: 'center',
           fontSize: 38,
           fontWeight: 600,

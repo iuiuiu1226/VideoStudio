@@ -17,6 +17,6 @@ export type Sub = {o: number; e: number; text: string};
 export const FPS = 30;
 export const SCENES = plan.scenes as Scene[];
 export const SUBS = plan.subs as Sub[];
-export const END_CARD_FRAMES = 90;
+export const END_CARD_FRAMES = 120;
 export const MAIN_FRAMES = Math.round(plan.total * FPS);
 export const TOTAL_FRAMES = MAIN_FRAMES + END_CARD_FRAMES;
