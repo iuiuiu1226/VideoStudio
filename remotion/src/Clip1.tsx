@@ -7,7 +7,7 @@ import {
   staticFile,
   useCurrentFrame,
 } from 'remotion';
-import {END_CARD_FRAMES, FPS, MAIN_FRAMES, SEGS, SUBS, srcToOut, Vis} from './clip1Data';
+import {END_CARD_FRAMES, FPS, MAIN_FRAMES, SCENES, SUBS, Vis} from './clip1Data';
 
 const GOLD = '#f2c35b';
 const GOLD_SOFT = 'rgba(242,195,91,0.55)';
@@ -113,7 +113,7 @@ const Hook: React.FC<{f: number}> = ({f}) => {
   );
 };
 
-const Meter: React.FC<{f: number}> = ({f}) => {
+const Meter: React.FC<{f: number; arrow?: number}> = ({f, arrow}) => {
   const X0 = 90;
   const W = 900;
   const px = (v: number) => X0 + (v / 1000) * W;
@@ -175,6 +175,15 @@ const Meter: React.FC<{f: number}> = ({f}) => {
         }}
       />
       <div style={{...label(60, CORAL), left: px(112.5), top: 395, transform: 'translateX(-30%)', opacity: drop}}>說謊 100–125</div>
+      {arrow !== undefined ? (
+        <div style={{position: 'absolute', inset: 0, opacity: interpolate(f, [arrow * FPS, arrow * FPS + 10], [0, 1], clamp)}}>
+          <svg width="1080" height="520" style={{position: 'absolute', inset: 0}}>
+            <path d={`M ${px(200) + 150} 450 L ${px(112.5) + 30} 450`} stroke={CORAL} strokeWidth="8" fill="none" strokeDasharray="16 12" />
+            <path d={`M ${px(112.5) + 30} 450 l 28 -20 l 0 40 z`} fill={CORAL} />
+          </svg>
+          <div style={{...label(46, CORAL), left: px(200) + 170, top: 418}}>背離正向</div>
+        </div>
+      ) : null}
     </>
   );
 };
@@ -330,7 +339,7 @@ const Virtue: React.FC<{f: number}> = ({f}) => {
   );
 };
 
-const Veil: React.FC<{f: number; total: number; lift: [number, number]}> = ({f, total, lift}) => {
+const Veil: React.FC<{f: number; total: number; lift: [number, number]; tag?: string}> = ({f, total, lift, tag}) => {
   const p = interpolate(f, [0, total], lift, clamp);
   const glow = 0.35 + 0.65 * p;
   const sway = Math.sin(f / 18) * 14;
@@ -367,6 +376,79 @@ const Veil: React.FC<{f: number; total: number; lift: [number, number]}> = ({f, 
         />
       ))}
       <div style={{...label(52, GOLD), left: 540, top: 440, transform: 'translateX(-50%)', opacity: interpolate(p, [0.85, 1], [0, 1], clamp)}}>輕鬆 · 平靜</div>
+      {tag ? (
+        <div style={{...label(46, GOLD), left: 540, top: 28, transform: 'translateX(-50%)', padding: '6px 30px', border: `3px solid ${GOLD}`, borderRadius: 999}}>{tag}</div>
+      ) : null}
+    </>
+  );
+};
+
+const Case: React.FC<{f: number; vis: Vis}> = ({f, vis}) => {
+  const at = vis.at ?? [0, 0, 0, 0];
+  const chips = vis.chips ?? [];
+  const head = interpolate(f, [0, 12], [0, 1], clamp);
+  const reveal = (i: number) => interpolate(f, [at[i] * FPS, at[i] * FPS + 10], [0, 1], clamp);
+  const tagIn = reveal(3);
+  return (
+    <>
+      <div style={{...label(70, GOLD), left: 60, top: 22, opacity: head, padding: '4px 34px', border: `4px solid ${GOLD}`, borderRadius: 16, boxShadow: '0 0 24px rgba(242,195,91,0.4)'}}>{vis.title}</div>
+      {chips.map((c, i) => {
+        const r = reveal(i);
+        const last = i === chips.length - 1;
+        return (
+          <React.Fragment key={i}>
+            <div
+              style={{
+                position: 'absolute',
+                left: 60,
+                top: 140 + i * 125,
+                width: 590,
+                height: 96,
+                borderRadius: 24,
+                border: `3px solid ${last ? CORAL : 'rgba(255,255,255,0.4)'}`,
+                background: last ? 'rgba(255,122,89,0.16)' : 'rgba(255,255,255,0.07)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 52,
+                fontWeight: 800,
+                letterSpacing: 3,
+                opacity: r,
+                transform: `translateX(${(1 - r) * -50}px)`,
+              }}
+            >
+              {c}
+            </div>
+            {i < chips.length - 1 ? (
+              <div style={{...label(34, GOLD), left: 340, top: 236 + i * 125, opacity: reveal(i + 1)}}>▼</div>
+            ) : null}
+          </React.Fragment>
+        );
+      })}
+      <div
+        style={{
+          position: 'absolute',
+          left: 730,
+          top: 160,
+          width: 280,
+          height: 280,
+          borderRadius: '50%',
+          background: `radial-gradient(circle at 35% 30%, ${CORAL}, rgba(10,12,40,0.92) 80%)`,
+          border: `5px solid ${GOLD}`,
+          boxShadow: `0 0 ${50 * tagIn}px ${CORAL}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 66,
+          fontWeight: 900,
+          letterSpacing: 4,
+          opacity: tagIn,
+          transform: `scale(${0.6 + 0.4 * tagIn})`,
+          textShadow: '0 4px 14px rgba(0,0,0,0.7)',
+        }}
+      >
+        {vis.tag}
+      </div>
     </>
   );
 };
@@ -387,12 +469,12 @@ const Visual: React.FC<{vis: Vis; f: number; total: number}> = ({vis, f, total})
     }}
   >
     <Mountains />
-    {vis.k === 'hook' && <Hook f={f} />}
-    {vis.k === 'meter' && <Meter f={f} />}
-    {vis.k === 'causes' && <Causes f={f} focus={vis.focus} />}
+    {vis.k === 'meter' && <Meter f={f} arrow={vis.arrow} />}
+    {vis.k === 'case' && <Case f={f} vis={vis} />}
+    {vis.k === 'causes' && <Causes f={f} focus={vis.focus ?? 'both'} />}
     {vis.k === 'split' && <Split f={f} />}
     {vis.k === 'virtue' && <Virtue f={f} />}
-    {vis.k === 'veil' && <Veil f={f} total={total} lift={vis.lift} />}
+    {vis.k === 'veil' && <Veil f={f} total={total} lift={vis.lift ?? [0, 0]} tag={vis.tag} />}
   </div>
 );
 
@@ -400,26 +482,12 @@ export const Clip1: React.FC = () => {
   const frame = useCurrentFrame();
   const t = frame / FPS;
 
-  let acc = 0;
-  let segIdx = SEGS.length - 1;
-  let segStartOut = 0;
-  for (let i = 0; i < SEGS.length; i++) {
-    const d = SEGS[i].e - SEGS[i].s;
-    if (t < acc + d - 1e-6) {
-      segIdx = i;
-      segStartOut = acc;
-      break;
-    }
-    acc += d;
-    segStartOut = acc;
-  }
-  const seg = SEGS[segIdx];
-  const localFrames = Math.max(0, Math.round((t - segStartOut) * FPS));
-  const segFrames = Math.round((seg.e - seg.s) * FPS);
+  const scene = SCENES.find((sc) => t >= sc.o - 1e-6 && t < sc.e - 1e-6) ?? SCENES[SCENES.length - 1];
+  const localFrames = Math.max(0, Math.round((t - scene.o) * FPS));
+  const segFrames = Math.max(1, Math.round((scene.e - scene.o) * FPS));
 
-  const sub = SUBS.find((s) => t >= srcToOut(s.s) - 1e-6 && t < srcToOut(s.e) - 1e-6);
-  const subOut = sub ? srcToOut(sub.s) : 0;
-  const subOp = sub ? interpolate(t - subOut, [0, 0.15], [0, 1], clamp) : 0;
+  const sub = SUBS.find((x) => t >= x.o - 1e-6 && t < x.e - 1e-6);
+  const subOp = sub ? interpolate(t - sub.o, [0, 0.12], [0, 1], clamp) : 0;
 
   const titleIn = interpolate(frame, [0, 16], [0, 1], clamp);
   const titleY = interpolate(frame, [0, 16], [40, 0], clamp);
@@ -499,7 +567,7 @@ export const Clip1: React.FC = () => {
           />
         </div>
 
-        <Visual vis={seg.vis} f={localFrames} total={segFrames} />
+        <Visual vis={scene.vis} f={localFrames} total={segFrames} />
 
         {/* 講者字幕：半透明卡片，與中間圖像分開 */}
         {sub ? (
