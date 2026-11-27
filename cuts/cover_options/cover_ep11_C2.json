@@ -1,0 +1,38 @@
+{
+ "src": "IMG_6617.MOV",
+ "frame": {
+  "x": 0,
+  "y": 0,
+  "w": 2160,
+  "h": 3840
+ },
+ "series": "BK 測試｜學員分享",
+ "logo": "assets/logo.png",
+ "quote_top": 990,
+ "sub": "上完課的真實感受",
+ "lines": [
+  {
+   "text": "為什麼大家都推薦？",
+   "size": 86,
+   "color": "white",
+   "weight": 800,
+   "gap": 30
+  },
+  {
+   "text": "BK 一日工作坊",
+   "size": 118,
+   "color": "gold",
+   "weight": 900
+  }
+ ],
+ "note_bg": "背景＝4K 原檔 t 秒、轉 SDR＋調色（同編號 10）、整張往下移 160 px（上方鏡像模糊補、90 px 漸層接縫），用 cover.py --bg 給",
+ "t": 127.0,
+ "mosaic": [
+  [
+   615,
+   1240,
+   165,
+   110
+  ]
+ ]
+}
