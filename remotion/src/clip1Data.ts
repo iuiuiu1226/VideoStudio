@@ -9,6 +9,8 @@ export type Vis = {
   tag?: string;
   at?: number[];
   arrow?: number;
+  hi?: number;
+  gap?: number;
   lift?: [number, number];
 };
 export type Scene = {o: number; e: number; vis: Vis};

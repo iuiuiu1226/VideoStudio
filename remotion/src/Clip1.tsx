@@ -113,54 +113,60 @@ const Hook: React.FC<{f: number}> = ({f}) => {
   );
 };
 
-const Meter: React.FC<{f: number; arrow?: number}> = ({f, arrow}) => {
+const Meter: React.FC<{f: number; hi?: number; gap?: number}> = ({f, hi, gap}) => {
+  // 刻度 0–400：讓 100–125 與 200 臨界線之間的距離看得清楚
   const X0 = 90;
   const W = 900;
-  const px = (v: number) => X0 + (v / 1000) * W;
+  const px = (v: number) => X0 + (v / 400) * W;
   const lineIn = interpolate(f, [0, 16], [0, 1], clamp);
   const drop = interpolate(f, [14, 34], [0, 1], clamp);
   const bounce = drop < 1 ? 0 : Math.sin((f - 34) / 5) * Math.max(0, 8 - (f - 34) * 0.25);
-  const markerY = interpolate(drop, [0, 1], [90, 330]) + bounce;
+  const markerY = interpolate(drop, [0, 1], [150, 320]) + bounce;
   const pulse = 0.6 + 0.4 * Math.sin(f / 6);
+  const hiIn = hi === undefined ? 0 : interpolate(f, [hi * FPS, hi * FPS + 14], [0, 1], clamp);
+  const gapIn = gap === undefined ? 0 : interpolate(f, [gap * FPS, gap * FPS + 14], [0, 1], clamp);
   return (
     <>
       <div
         style={{
           position: 'absolute',
           left: X0,
-          top: 310,
+          top: 300,
           width: W,
           height: 40,
           borderRadius: 20,
-          background: 'linear-gradient(90deg,#b8322a,#e0822b 20%,#f2c35b 45%,#bfe3ff 100%)',
+          background: 'linear-gradient(90deg,#b8322a,#e0822b 30%,#f2c35b 52%,#bfe3ff 100%)',
           opacity: interpolate(f, [0, 12], [0, 1], clamp),
         }}
       />
+      <div style={{position: 'absolute', left: X0, top: 300, width: px(200) - X0, height: 40, borderRadius: '20px 0 0 20px', background: 'rgba(80,0,0,0.35)'}} />
       <div
         style={{
           position: 'absolute',
-          left: X0,
-          top: 310,
-          width: px(200) - X0,
+          left: px(200),
+          top: 300,
+          width: X0 + W - px(200),
           height: 40,
-          borderRadius: '20px 0 0 20px',
-          background: 'rgba(80,0,0,0.35)',
+          borderRadius: '0 20px 20px 0',
+          boxShadow: `0 0 ${40 * hiIn}px rgba(242,195,91,${0.9 * hiIn})`,
+          border: `3px solid rgba(242,195,91,${hiIn})`,
+          boxSizing: 'border-box',
         }}
       />
       <div
         style={{
           position: 'absolute',
           left: px(200) - 2,
-          top: 150 + (1 - lineIn) * 200,
+          top: 100 + (1 - lineIn) * 200,
           width: 4,
-          height: 230 * lineIn,
+          height: 270 * lineIn,
           background: GOLD,
           boxShadow: '0 0 16px rgba(242,195,91,0.8)',
         }}
       />
-      <div style={{...label(52, GOLD), left: px(200), top: 85, transform: 'translateX(-50%)', opacity: lineIn}}>200 臨界線</div>
-      <div style={{...label(34, 'rgba(255,255,255,0.65)'), left: X0, top: 262, opacity: lineIn}}>低頻</div>
-      <div style={{...label(34, 'rgba(255,255,255,0.65)'), left: X0 + W, top: 262, transform: 'translateX(-100%)', opacity: lineIn}}>高頻</div>
+      <div style={{...label(52, GOLD), left: px(200), top: 30, transform: 'translateX(-50%)', opacity: lineIn}}>200 臨界線</div>
+      <div style={{...label(44, 'rgba(255,255,255,0.7)'), left: (X0 + px(200)) / 2, top: 130, transform: 'translateX(-50%)', opacity: lineIn}}>低頻</div>
+      <div style={{...label(52, GOLD), left: (px(200) + X0 + W) / 2, top: 125, transform: 'translateX(-50%)', opacity: hiIn, textShadow: '0 0 24px rgba(242,195,91,0.7)'}}>高頻・正向</div>
       <div
         style={{
           position: 'absolute',
@@ -174,16 +180,13 @@ const Meter: React.FC<{f: number; arrow?: number}> = ({f, arrow}) => {
           border: '4px solid #fff',
         }}
       />
-      <div style={{...label(60, CORAL), left: px(112.5), top: 395, transform: 'translateX(-30%)', opacity: drop}}>說謊 100–125</div>
-      {arrow !== undefined ? (
-        <div style={{position: 'absolute', inset: 0, opacity: interpolate(f, [arrow * FPS, arrow * FPS + 10], [0, 1], clamp)}}>
-          <svg width="1080" height="520" style={{position: 'absolute', inset: 0}}>
-            <path d={`M ${px(200) + 150} 450 L ${px(112.5) + 30} 450`} stroke={CORAL} strokeWidth="8" fill="none" strokeDasharray="16 12" />
-            <path d={`M ${px(112.5) + 30} 450 l 28 -20 l 0 40 z`} fill={CORAL} />
-          </svg>
-          <div style={{...label(46, CORAL), left: px(200) + 170, top: 418}}>背離正向</div>
-        </div>
-      ) : null}
+      <div style={{...label(52, CORAL), left: px(112.5), top: 218, transform: 'translateX(-50%)', opacity: drop}}>說謊 100–125</div>
+      <div style={{position: 'absolute', inset: 0, opacity: gapIn}}>
+        <svg width="1080" height="520" style={{position: 'absolute', inset: 0}}>
+          <path d={`M ${px(125)} 372 L ${px(125)} 388 L ${px(200)} 388 L ${px(200)} 372`} stroke={GOLD} strokeWidth="5" fill="none" />
+        </svg>
+        <div style={{...label(52, GOLD), left: (px(125) + px(200)) / 2, top: 410, transform: 'translateX(-50%)'}}>還差 75–100 分</div>
+      </div>
     </>
   );
 };
@@ -469,7 +472,7 @@ const Visual: React.FC<{vis: Vis; f: number; total: number}> = ({vis, f, total})
     }}
   >
     <Mountains />
-    {vis.k === 'meter' && <Meter f={f} arrow={vis.arrow} />}
+    {vis.k === 'meter' && <Meter f={f} hi={vis.hi} gap={vis.gap} />}
     {vis.k === 'case' && <Case f={f} vis={vis} />}
     {vis.k === 'causes' && <Causes f={f} focus={vis.focus ?? 'both'} />}
     {vis.k === 'split' && <Split f={f} />}
