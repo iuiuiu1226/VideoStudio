@@ -609,7 +609,7 @@ export const Clip1: React.FC = () => {
                 background: 'rgba(20,24,50,0.6)',
               }}
             >
-              完整直播｜YouTube 第七感宇宙能量學
+              完整直播｜YouTube 第七感宇宙智慧學
             </div>
           </div>
         </AbsoluteFill>
@@ -629,7 +629,7 @@ export const Clip1: React.FC = () => {
           color: 'rgba(255,255,255,0.55)',
         }}
       >
-        完整直播｜YouTube 第七感宇宙能量學
+        完整直播｜YouTube 第七感宇宙智慧學
       </div>
       <div style={{position: 'absolute', left: 0, bottom: 0, height: 6, width: (frame / (MAIN_FRAMES + END_CARD_FRAMES)) * 1080, background: GOLD}} />
     </AbsoluteFill>
