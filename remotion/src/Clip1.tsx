@@ -526,7 +526,7 @@ export const Clip1: React.FC = () => {
           position: 'absolute',
           left: 64,
           top: 232,
-          opacity: titleIn,
+          opacity: endLocal >= 0 ? 0 : titleIn,
           transform: `translateY(${titleY}px)`,
           fontSize: 98,
           fontWeight: 900,
@@ -592,21 +592,51 @@ export const Clip1: React.FC = () => {
       {endLocal >= 0 ? (
         <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
           <div style={{opacity: interpolate(endLocal, [0, 14], [0, 1], clamp), textAlign: 'center', textShadow: '0 6px 24px rgba(0,0,0,0.6)'}}>
-            <div style={{fontSize: 92, fontWeight: 900, lineHeight: 1.35}}>說謊，只是第 1 種</div>
-            <div style={{fontSize: 108, fontWeight: 900, lineHeight: 1.35, marginTop: 10}}>
-              還有 <span style={{color: GOLD, textShadow: '0 0 30px rgba(242,195,91,0.7)'}}>4</span> 種行為
+            <div style={{fontSize: 84, fontWeight: 900, lineHeight: 1.3}}>
+              拉低能量的<span style={{color: GOLD}}>五種行為</span>
+            </div>
+            <div style={{marginTop: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18}}>
+              {['說謊', '貪小便宜', '講話損人', '高傲自傲', '疑心'].map((t, i) => {
+                const r = interpolate(endLocal, [10 + i * 6, 22 + i * 6], [0, 1], clamp);
+                const first = i === 0;
+                return (
+                  <div
+                    key={t}
+                    style={{
+                      opacity: r,
+                      transform: `translateY(${(1 - r) * 24}px)`,
+                      minWidth: 520,
+                      padding: '10px 36px',
+                      borderRadius: 18,
+                      fontSize: 62,
+                      fontWeight: 800,
+                      letterSpacing: 6,
+                      color: first ? GOLD : '#fff',
+                      border: first ? `4px solid ${GOLD}` : '3px solid rgba(255,255,255,0.3)',
+                      background: first ? 'rgba(242,195,91,0.12)' : 'rgba(255,255,255,0.05)',
+                      boxShadow: first ? '0 0 28px rgba(242,195,91,0.45)' : undefined,
+                    }}
+                  >
+                    {t}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{marginTop: 54, fontSize: 80, fontWeight: 900, color: GOLD, opacity: interpolate(endLocal, [50, 64], [0, 1], clamp), textShadow: '0 0 30px rgba(242,195,91,0.6)'}}>
+              你中了幾個？
             </div>
             <div
               style={{
                 display: 'inline-block',
-                marginTop: 70,
+                marginTop: 56,
                 padding: '16px 40px',
                 border: `3px solid ${GOLD}`,
                 borderRadius: 999,
-                fontSize: 42,
+                fontSize: 40,
                 fontWeight: 700,
                 color: GOLD,
                 background: 'rgba(20,24,50,0.6)',
+                opacity: interpolate(endLocal, [64, 78], [0, 1], clamp),
               }}
             >
               完整直播｜YouTube 第七感宇宙智慧學
